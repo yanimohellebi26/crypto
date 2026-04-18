@@ -1,0 +1,173 @@
+SOURCE: Bruce Schneier — "The Solitaire Encryption Algorithm" version 1.2, 5/26/99
+URL: https://www.schneier.com/academic/solitaire/
+NOTE: Contenu intégral téléchargé depuis le site officiel de Schneier.
+
+===
+CHUNK: schneier_overview
+TITLE: Vue d'ensemble de Solitaire — Introduction officielle de Schneier
+
+Dans le roman Cryptonomicon de Neal Stephenson, le personnage Enoch Root décrit un système cryptographique appelé "Pontifex" à Randy Waterhouse, révélant qu'il utilise un jeu de cartes standard. Les personnages échangent des messages chiffrés via ce système. Appelé "Solitaire", il a été conçu pour permettre à des agents de terrain de communiquer de façon sécurisée sans électronique ni outils incriminants. Un agent peut manquer d'accès à un ordinateur ou faire face à des poursuites pour possession de matériel de chiffrement, mais "un jeu de cartes... quel mal cela peut-il faire ?"
+
+Solitaire tire sa sécurité de l'aléa d'un jeu mélangé. Bien que simulable sur ordinateur, il fonctionne via une implémentation manuelle.
+
+Citation directe de Schneier : "Despite its low-tech implementation, it provides high-tech security, designed to resist well-funded military adversaries with advanced computers and skilled cryptanalysts. No guarantee exists against clever attacks, but it surpasses any other pencil-and-paper cipher known."
+
+Vitesse : chiffrer des messages plus longs nécessite une soirée entière. Les chiffrements manuels des espions soviétiques nécessitaient un investissement en temps similaire.
+
+===
+CHUNK: schneier_encryption_process
+TITLE: Processus de chiffrement et déchiffrement (Schneier, officiel)
+
+Solitaire opère comme un chiffrement par flux en mode output-feedback (OFB). Il génère un keystream de nombres entre 1 et 26.
+
+Chiffrement — exemple officiel "DO NOT USE PC" :
+1. Diviser le texte clair en groupes de 5 caractères, compléter avec X : DONOT USEPC
+2. Générer les lettres du keystream : KDWUP ONOWT
+3. Convertir le clair en nombres (A=1, B=2, ..., Z=26) : 4 15 14 15 20 | 21 19 5 16 3
+4. Convertir le keystream de même : 11 4 23 21 16 | 15 14 15 23 20
+5. Additionner modulo 26 (si la somme dépasse 26, soustraire 26) : 15 19 11 10 10 | 10 7 20 13 23
+6. Reconvertir en lettres : OSKJJ JGTMW
+
+Déchiffrement — exemple "OSKJJ JGTMW" :
+1. Grouper en blocs de 5 : OSKJJ JGTMW
+2. Générer le même keystream : KDWUP ONOWT
+3. Convertir le chiffré en nombres : 15 19 11 10 10 | 10 7 20 13 23
+4. Convertir le keystream : 11 4 23 21 16 | 15 14 15 23 20
+5. Soustraire le keystream du chiffré modulo 26 (si le premier est inférieur au second, ajouter 26 d'abord) : 4 15 14 15 20 | 21 19 5 16 3
+6. Reconvertir : DONOT USEPC
+
+===
+CHUNK: schneier_6steps
+TITLE: Génération du keystream — Les 6 étapes officielles de Schneier
+
+Un jeu de 54 cartes (52 + 2 jokers) représente une permutation de 54 éléments. Le nombre d'ordres possibles est 54! ≈ 2.31 × 10^71.
+
+Les 6 étapes pour générer un caractère du keystream :
+
+Étape 1 — Déplacer le Joker A :
+Localiser le Joker A, le déplacer d'une position vers le bas (échanger avec la carte en dessous). S'il est en bas, le placer juste sous la carte du dessus.
+
+Étape 2 — Déplacer le Joker B :
+Localiser le Joker B, le déplacer de deux positions vers le bas. S'il est en bas, le placer sous la deuxième carte. S'il est à une position du bas, le placer sous la première carte.
+CRITIQUE : Toujours déplacer le Joker A AVANT le Joker B, surtout quand ils sont adjacents.
+
+Exemples officiels de Schneier :
+- Avant : A 7 2 B 9 4 1 → Après : 7 A 2 9 4 B 1
+- Avant : 3 A B 8 9 6 → Après : 3 A 8 B 9 6
+
+Étape 3 — Triple coupe (Triple Cut) :
+Échanger les cartes au-dessus du premier joker (le plus proche du dessus) avec les cartes sous le deuxième joker. Les jokers et les cartes entre eux restent en place. Les sections vides (jokers adjacents ou en position extrême) se déplacent quand même.
+Exemple : 2 4 6 B 5 8 7 1 A 3 9 → 3 9 B 5 8 7 1 A 2 4 6
+Autre exemple : B 5 8 7 1 A 3 9 → 3 9 B 5 8 7 1 A
+Cas immobile : B 5 8 7 1 A → B 5 8 7 1 A (inchangé)
+
+Étape 4 — Coupe simple (Count Cut) :
+Examiner la carte du bas, convertir en nombre 1-53 par ordre Bridge : trèfle (1-13), carreau (14-26), cœur (27-39), pique (40-52), joker (53). Compter depuis le dessus ce nombre de cartes. Couper après la carte comptée, en laissant la carte du bas en place.
+Un paquet avec un joker comme carte du bas reste inchangé.
+
+Étape 5 — Carte de sortie (Output Card) :
+Regarder la carte du dessus, convertir en 1-53. Compter ce nombre de positions vers le bas. Écrire la carte après la carte comptée sans la retirer. Si c'est un joker, ne pas noter et recommencer depuis l'étape 1. Cette étape NE MODIFIE PAS l'état du paquet.
+
+Étape 6 — Convertir en numéro keystream :
+Convertir la carte de sortie par ordre Bridge modifié : trèfle et cœur = 1-13, carreau et pique = 14-26. (Seulement 26 sorties nécessaires, pas 52.)
+
+===
+CHUNK: schneier_sample1_unkeyed
+TITLE: Exemple 1 — Paquet non clé (Schneier, officiel)
+
+Paquet initial : A-trèfle à R-trèfle, A-carreau à R-carreau, A-cœur à R-cœur, A-pique à R-pique, Joker A, Joker B. (En clair : 1...52, A, B)
+
+Génération des deux premières sorties :
+
+Paquet initial : 1 2 3 4 ... 52 A B
+
+Après étape 1 (déplacer Joker A) : 1 2 3 4 ... 52 B A
+(A et B sont échangés car A est en avant-dernière position)
+
+Après étape 2 (déplacer Joker B) : 1 B 2 3 4 ... 52 A
+(B est en avant-dernière position → passe sous la première carte)
+
+Après étape 3 (triple coupe) : B 2 3 4 ... 52 A 1
+(Segment HAUT = [1], segment BAS = vide, échangés)
+
+Après étape 4 (coupe simple) : 2 3 4 ... 52 A B 1
+(La dernière carte est 1 → couper 1 carte : B passe au-dessus du 1)
+
+Étape 5 : Carte du dessus = 2 → compter 2 positions → carte en position 3 = 4
+Première sortie Solitaire = 4 ✓
+
+Dix premières sorties : 4 49 10 (53=sauté) 24 8 51 44 6 4 33
+Avec un clair de 10×A : EXKYI ZSGEH
+
+===
+CHUNK: schneier_sample2_foo
+TITLE: Exemple 2 — Clé "FOO" (Schneier, officiel)
+
+Passphrase : FOO
+Premières 15 sorties keystream : 8 19 7 25 20 (53=sauté) 9 8 22 32 43 5 26 17 (53=sauté) 38 48
+Clair : AAAAA AAAAA AAAAA (15 A)
+Chiffré : ITHZU JIWGR FARMW
+
+===
+CHUNK: schneier_sample3_cryptonomicon
+TITLE: Exemple 3 — Clé "CRYPTONOMICON" (Schneier, officiel)
+
+Passphrase : CRYPTONOMICON
+Message : SOLITAIRE (+ X de padding = SOLITAIREX)
+Chiffré : KIRAK SFJAN
+
+Vecteur supplémentaire — clé "cryptonomicon", 25×A :
+Chiffré : SUGSR SXSWQ RMXOH IPBFP XARYQ
+
+===
+CHUNK: schneier_keying_methods
+TITLE: Initialisation de la clé — 3 méthodes officielles de Schneier
+
+Méthode 1 — Jeux de cartes identiques mélangés :
+Une partie mélange un paquet aléatoire, crée une copie identique. Un au sender, l'autre au receiver. La plupart des gens mélangent insuffisamment : mélanger au moins 6 fois. Garder un paquet de secours dans le même ordre pour la correction d'erreurs.
+
+Méthode 2 — Ordre Bridge (journal) :
+Une description d'une main de bridge dans un journal contient environ 95 bits d'information. Les deux parties établissent une convention de conversion bridge → ordre du paquet.
+
+Méthode 3 — Passphrase (recommandée) :
+Partir d'un paquet standard (1...52, Joker A, Joker B). Pour chaque caractère de la passphrase : exécuter les étapes 1-4 normalement, PUIS effectuer une deuxième coupe (step 4) basée sur la valeur numérique du caractère (A=1...Z=26) au lieu de la carte du bas.
+
+Important de Schneier : L'anglais standard contient seulement environ 1.4 bits d'aléa par caractère. Un minimum de 64 caractères est nécessaire ; 80+ recommandés. Des clés plus courtes ne peuvent pas fournir une sécurité adéquate.
+
+===
+CHUNK: schneier_security_rules
+TITLE: Règles de sécurité opérationnelles — Schneier (9 règles officielles)
+
+1. Ne jamais réutiliser les clés : La première règle des stream ciphers OFB s'applique universellement. Si deux chiffrés A+K et B+K existent, leur soustraction donne (A+K)−(B+K) = A−B. Cela présente deux flux de clair combinés sans clé — que les cryptanalystes professionnels peuvent casser facilement. NE JAMAIS utiliser la même clé pour deux messages différents.
+
+2. Garder les messages courts : Quelques milliers de caractères maximum. Utiliser abréviations et argot. Éviter le bavardage.
+
+3. Compter les erreurs : Les stream ciphers OFB ne se remettent pas des erreurs. Une seule erreur corrompt toutes les lettres suivantes. Toujours chiffrer deux fois pour vérifier. Pour les clés aléatoires, garder des copies de secours.
+
+4. Mélanger après utilisation : Solitaire est réversible — la police secrète trouvant le paquet utilisé peut remonter en arrière et récupérer tous les caractères de sortie. Mélanger le paquet complètement (6 fois) après chiffrement.
+
+5. Maximiser la sécurité opérationnelle : Effectuer les opérations mentalement si possible. Si les autorités approchent, mélanger calmement. (Éviter de jeter le paquet en l'air.)
+
+6. Protéger les feuilles de calcul : Les calculs écrits contiennent des informations sensibles. Brûler est excellent. Les papiers de cigarette non gommés brûlent proprement. Les papiers Club Cabaret Width brûlent complètement. Un papier de 3 pouces tient 80 caractères.
+
+7. Considérer les alternatives informatiques : Souvent un seul côté de la communication nécessite le paquet physique. Utiliser des ordinateurs quand c'est possible — plus rapide et sans erreur.
+
+8. Expliquer le paquet : La plupart des jeux de cartes excluent les jokers, rendant le port d'un paquet suspect. Développer une explication plausible.
+
+9. Supposer la méthode connue : La sécurité de Solitaire ne dépend pas du secret de la méthode. Supposer que la police secrète sait que vous l'utilisez.
+
+===
+CHUNK: schneier_security_analysis
+TITLE: Analyses de sécurité académiques de Solitaire (références officielles)
+
+Analyses académiques documentées par Schneier sur son site :
+
+1. Paul Crowley (1999) — "Problems with Bruce Schneier's Solitaire" : biais statistique 1/22.5 vs 1/26, non-réversibilité du CPRNG.
+
+2. B. Pogorelov et M. Pudovkina (2003) — "Properties of the Transformation Semigroup of the Solitaire Stream Cipher" : propriétés algébriques du semi-groupe de transformation.
+
+3. W. Tounsi, B. Justus, N.C. Boulahia, F. Cuppen et J.G. Alfaro (2014) — "Probabilistic Cycle Detection for Schneier's Solitaire Keystream Algorithm" : détection probabiliste de cycles dans le keystream.
+
+4. D. Shiu (2019) — "Analysis of Solitaire" : analyse générale.
+
+Note : Seule l'implémentation Perl a été testée formellement par Counterpane (l'entreprise de Schneier). Les autres langages (C, Python, Java, Ruby, Rust, etc.) sont des contributions communautaires.

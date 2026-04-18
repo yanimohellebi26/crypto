@@ -1,0 +1,429 @@
+SOURCE: PHASE_0_PREREQUIS.md — Tout comprendre avant de coder
+DESCRIPTION: Document complet de prérequis académiques sur Solitaire (M1 Cryptographie 2025-26)
+
+===
+CHUNK: history_context
+TITLE: Contexte historique — Solitaire / Pontifex
+
+Le chiffrement Solitaire (nom de code : « Pontifex ») a été conçu par Bruce Schneier pour le roman *Cryptonomicon* (1999) de Neal Stephenson. Dans le roman, le personnage Enoch Root explique à Randy Waterhouse que les manipulations du personnage « Pontifex » correspondent à des opérations sur un jeu de cartes ordinaire.
+
+Bruce Schneier est l'auteur de *Applied Cryptography* (1996), la bible de la cryptographie appliquée. Neal Stephenson lui a demandé de créer un algorithme réaliste pour son roman.
+
+Pourquoi un chiffrement manuel ?
+- Un ordinateur avec des outils crypto = preuve incriminante
+- Un jeu de cartes = objet anodin, inoffensif
+- Utilisable sans aucune technologie électronique
+- Un agent condamné à ne plus toucher un ordinateur (cas de Kevin Mitnick) peut encore chiffrer
+
+Temps requis : Schneier prévient que chiffrer un long message prend une soirée entière. C'est comparable aux vrais chiffrements espions soviétiques.
+
+===
+CHUNK: math_mod26
+TITLE: Arithmétique modulaire mod 26 — Base du chiffrement
+
+Le modulo est le cœur mathématique du chiffrement. a mod n = reste de la division de a par n.
+
+Exemples : 5 mod 26 = 5, 27 mod 26 = 1, 52 mod 26 = 0, 26 mod 26 = 0.
+
+Analogie : un cadran de 26 positions (A à Z), comme une horloge de 12h : 11h + 3h = 2h.
+
+PIÈGE CRITIQUE — cas mod 26 = 0 :
+Les lettres sont numérotées A=1, B=2, ..., Z=26 (pas de 0 à 25).
+Quand le résultat du modulo vaut 0, ce n'est PAS A (1) mais Z (26) !
+
+Chiffrement : (valeur_clair + valeur_flux) mod 26 → si résultat = 0, lettre = Z (26)
+Déchiffrement : (valeur_chiffré - valeur_flux) → si résultat ≤ 0, ajouter 26
+
+Exemple :
+- Chiffrement de N (14) avec flux L (12) : 14 + 12 = 26 → 26 mod 26 = 0 → Z (PAS A !)
+
+===
+CHUNK: math_permutations
+TITLE: Permutations et espace de clés — 54! possibilités
+
+Une permutation est un réarrangement d'un ensemble. Un paquet de 54 cartes = une permutation de {1...54}.
+
+Nombre total : 54! = 54 × 53 × ... × 1 ≈ 2.31 × 10^71
+
+En bits d'entropie : log2(54!) ≈ 226 bits
+
+Comparaison :
+- AES-128 : 128 bits de clé
+- AES-256 : 256 bits de clé
+- Solitaire : ~226 bits — plus que AES-128, presque comme AES-256
+- RSA-2048 : ~112 bits de sécurité effective
+
+→ L'espace de clés de Solitaire est immense. Le brute force exhaustif est impossible.
+→ MAIS : l'espace effectif dépend du mot de passe utilisé pour le keying.
+
+===
+CHUNK: math_indexation
+TITLE: Indexation et positions dans le paquet
+
+Le paquet est une liste ordonnée de 54 éléments. L'indexation Python commence à 0, mais l'algorithme Solitaire raisonne en positions 1 à 54.
+
+Dessus (top) = index 0 = première carte = position 1
+Dessous (bottom) = index 53 = dernière carte = position 54
+
+ATTENTION : une erreur off-by-one (±1) dans les indices corrompt TOUT le flux de clés.
+
+Le paquet est conceptuellement circulaire pour les opérations 1 et 2 : après la dernière carte vient la première (avec des règles spécifiques de wrapping).
+
+===
+CHUNK: stream_cipher_theory
+TITLE: Chiffrement par flux (Stream Cipher) — Concepts fondamentaux
+
+Solitaire est un chiffrement par flux en mode output-feedback (OFB).
+
+Principe :
+1. Un générateur pseudo-aléatoire (CPRNG) produit un flux de clés (keystream)
+2. Chaque nombre du flux est combiné avec un caractère du message clair
+3. Combinaison : addition modulo 26 (chiffrement) ou soustraction (déchiffrement)
+
+Formules :
+- Chiffrement : Ci = (Pi + Ki) mod 26, si = 0 → Ci = 26 (Z)
+- Déchiffrement : Pi = (Ci - Ki), si ≤ 0 → Pi += 26
+où Pi = lettre claire, Ki = valeur keystream, Ci = lettre chiffrée
+
+Le flux est déterministe : même état initial du paquet → même séquence. Émetteur et récepteur partagent l'ordre initial.
+
+===
+CHUNK: otp_comparison
+TITLE: Masque jetable (One-Time Pad) et comparaison avec Solitaire
+
+Le masque jetable est la seule méthode mathématiquement prouvée inviolable (Shannon, 1949).
+Conditions : clé aussi longue que le message, parfaitement aléatoire, jamais réutilisée.
+
+Solitaire s'inspire du masque jetable mais produit un flux pseudo-aléatoire (déterministe).
+C'est un stream cipher, pas un vrai masque jetable.
+
+Tableau comparatif :
+- Solitaire : implémentation manuelle (cartes), ~226 bits, biais Crowley connu
+- RC4 : logiciel, 40-2048 bits, biais pire (interdit TLS)
+- AES-CTR : logiciel/matériel, 128/256 bits, pas de biais connu
+- OTP (masque jetable) : sécurité prouvée, clé = longueur du message
+
+===
+CHUNK: card_deck_values
+TITLE: Modélisation du jeu de 54 cartes — Deux systèmes de valeurs
+
+54 cartes : 52 standard + 2 jokers. Chaque carte = un numéro unique de 1 à 54.
+
+Ordre Bridge (standard international) :
+- Trèfle (♣) : As=1 à Roi=13
+- Carreau (♦) : As=14 à Roi=26
+- Cœur (♥) : As=27 à Roi=39
+- Pique (♠) : As=40 à Roi=52
+- Joker A (noir/petit) : 53
+- Joker B (rouge/grand) : 54
+
+PIÈGE MAJEUR : deux systèmes de valeurs, ne PAS confondre !
+
+Valeur Bridge (pour opérations 4 et 5 — position de coupe) :
+- Trèfle 1-13, Carreau 14-26, Cœur 27-39, Pique 40-52
+- Joker A = 53, Joker B = 53 (les DEUX valent 53 en Bridge !)
+
+Valeur de chiffrement (pour la sortie finale — opération 5 uniquement) :
+- Trèfle 1-13, Carreau 14-26 (identique)
+- Cœur 1-13, Pique 14-26 (SOUSTRAIRE 26 si valeur Bridge > 26)
+- Joker A et B : INVALIDE → recommencer tout le cycle
+
+===
+CHUNK: op1_joker_a
+TITLE: Opération 1 — Recul du Joker A d'une position
+
+Règle : trouver le Joker A (numéro 53), le permuter avec la carte juste après lui.
+
+Cas normal : ... X [A] Y Z ... → ... X Y [A] Z ...
+
+CAS SPÉCIAL CRITIQUE — Joker A en DERNIÈRE position :
+Le Joker A ne revient PAS en première position. Il passe en DEUXIÈME position.
+Avant : 7 3 5 9 2 [A]
+Après : 7 [A] 3 5 9 2
+
+Raison : le paquet est circulaire. « Une position après le bas » = le dessus, mais Joker A ne peut pas être en 1ère position par cette opération → il passe en 2ème.
+
+Piège #1 le plus commun : mettre A en 1ère position quand il est en dernière.
+
+===
+CHUNK: op2_joker_b
+TITLE: Opération 2 — Recul du Joker B de deux positions
+
+Règle : trouver le Joker B (numéro 54), le déplacer de DEUX positions vers le bas.
+
+Cas normal : ... X [B] Y Z W ... → ... X Y Z [B] W ...
+
+CAS SPÉCIAL #1 — Joker B en DERNIÈRE position :
+Il passe en 3ème position.
+Avant : 7 3 5 9 [B] → Après : 7 3 [B] 5 9
+
+CAS SPÉCIAL #2 — Joker B en AVANT-DERNIÈRE position :
+Il passe en 2ème position.
+Avant : 7 3 5 [B] 9 → Après : 7 [B] 3 5 9
+
+Règle absolue : Joker B ne peut JAMAIS être en 1ère position par cette opération.
+
+ORDRE CRITIQUE : toujours op 1 (Joker A) AVANT op 2 (Joker B). L'ordre compte !
+
+Exemple de Schneier quand les jokers sont proches :
+Avant : 3 A B 8 9 6
+Après op.1 : 3 B A 8 9 6 (A descend de 1, passe après B)
+Après op.2 : 3 A 8 B 9 6 (B descend de 2)
+
+===
+CHUNK: op3_triple_cut
+TITLE: Opération 3 — Triple coupe (double coupe par rapport aux jokers)
+
+Règle : le paquet est divisé en 3 segments par les deux jokers.
+[Segment HAUT] [Joker_premier ... Joker_second] [Segment BAS]
+On intervertit HAUT et BAS. Les jokers (et tout ce qui est entre eux) restent en place.
+
+Exemple :
+Avant : 2 4 6 | B 5 8 7 1 A | 3 9
+Après : 3 9   | B 5 8 7 1 A | 2 4 6
+
+IMPORTANT : « premier joker » = le plus près du dessus (peut être A ou B selon l'état actuel).
+
+Cas limites — segments vides :
+- Joker en 1ère position → segment HAUT vide (cas valide)
+- Joker en dernière position → segment BAS vide (cas valide)
+- Les deux jokers aux extrémités → aucun changement
+- Jokers adjacents : le milieu ne contient que les deux jokers
+
+===
+CHUNK: op4_count_cut
+TITLE: Opération 4 — Coupe simple déterminée par la dernière carte
+
+Règle :
+1. Regarder la DERNIÈRE carte du paquet → n = sa valeur Bridge (1-53)
+2. Prendre les n premières cartes du dessus
+3. Les placer juste AU-DESSUS de la dernière carte (avant-dernière position)
+4. La dernière carte ne bouge JAMAIS — c'est crucial pour la réversibilité mathématique
+
+Avant : | n premières cartes | reste | dernière carte |
+Après :  | reste | n premières cartes | dernière carte |
+
+CAS SPÉCIAL — dernière carte = Joker (valeur Bridge = 53) :
+On prendrait 53 cartes sur 54 → paquet quasi inchangé.
+
+===
+CHUNK: op5_output
+TITLE: Opération 5 — Lecture de la valeur de sortie (sans modifier le paquet)
+
+Règle :
+1. Regarder la 1ère carte (dessus) → n = sa valeur Bridge (1-53)
+2. Compter n cartes depuis le dessus
+3. La carte en position n+1 est la carte de sortie
+4. Si c'est un joker → IGNORER, recommencer tout le cycle 1-2-3-4-5
+5. Lire la valeur de chiffrement : si > 26, soustraire 26 → résultat 1-26
+6. Cette opération NE MODIFIE PAS le paquet
+
+Exemple (paquet initial non clé, après op 1-4) :
+Résultat : 2 3 4 ... 52 A B 1
+Première carte = 2 → compter 2 → carte 3 (2) et carte 4 (le 4)
+Valeur de sortie = 4 → = 4 (= lettre D)
+
+===
+CHUNK: keying_method
+TITLE: Keying du paquet — Initialisation par mot de passe
+
+Méthode 1 : Ordre fixe
+Émetteur et récepteur s'accordent sur un ordre précis des 54 cartes (mélange aléatoire, colonne de bridge, etc.).
+
+Méthode 2 : Keying par passphrase (recommandé par Schneier)
+Partir du paquet standard (1 à 52, Joker A, Joker B), puis pour CHAQUE LETTRE du mot de passe :
+1. Exécuter les opérations 1, 2, 3, 4 (PAS l'opération 5)
+2. Faire une coupe supplémentaire avec la valeur numérique de la lettre (A=1...Z=26)
+
+Longueur minimale :
+- Schneier recommande au minimum 64 caractères, idéalement 80+
+- L'anglais ≈ 1.4 bits d'entropie par caractère
+- 80 caractères × 1.4 bits ≈ 112 bits de sécurité effective
+
+Persistance d'état CRITIQUE :
+L'état du paquet est conservé entre les messages successifs.
+Message 1 de 10 lettres → 10 cycles → paquet évolue.
+Message 2 : reprendre le paquet dans l'état où il se trouve après le message 1.
+
+===
+CHUNK: test_vectors_official
+TITLE: Vecteurs de test officiels de Schneier — Non négociables
+
+Ces vecteurs DOIVENT être reproduits exactement. Une seule erreur = bug.
+
+Vecteur 1 : Paquet standard (1..52, Joker A, Joker B)
+- Clair : AAAAAAAAAAAAAAA
+- Keystream : 4, 49, 10, (53=skip), 24, 8, 51, 44, 6, 4, 33
+- Chiffré : EXKYIZSGEH UNTIQ
+
+Vecteur 2 : Clé "FOO"
+- Clair : AAAAAAAAAAAAAAA
+- Keystream : 8, 19, 7, 25, 20, (53=skip), 9, 8, 22, 32, 43, 5, 26, 17, (53=skip), 38, 48
+- Chiffré : ITHZUJIWGRFARMW
+
+Vecteur 3 : Clé "CRYPTONOMICON"
+- Clair : SOLITAIREX (SOLITAIRE + X de padding)
+- Chiffré : KIRAKSFJAN
+
+Vecteurs supplémentaires (clé → chiffré de AAAAAAAAAAAAAAA) :
+- "f" → XYIUQBMHKKJBEGY
+- "fo" → TUJYMBERLGXNDIW
+- "foo" → ITHZUJIWGRFARMW (même que "FOO" car insensible à la casse)
+- "a" → XODALGSCULIQNSC
+- "aa" → OHGWMXXCAIMCIQP
+- "aaa" → DCSQYHBQZNGDRUT
+
+===
+CHUNK: test_vectors_first_keystream
+TITLE: Premier keystream du paquet non clé — Exercice détaillé
+
+Paquet initial : [1, 2, 3, ..., 52, 53(A), 54(B)]
+
+Opération 1 — Joker A (53) en position 52 (avant-dernière) :
+A et B sont échangés → [1, 2, ..., 52, B, A]
+
+Opération 2 — Joker B (54) en position 52 (avant-dernière) :
+CAS SPÉCIAL avant-dernière → passe en 2ème position :
+[1, B, 2, 3, ..., 52, A]
+
+Opération 3 — Triple coupe :
+Premier joker = B (position 1), Second joker = A (position 53)
+Segment HAUT = [1] (position 0)
+Segment MILIEU = [B, 2, 3, ..., 52, A] (positions 1-53)
+Segment BAS = [] (vide — A est en dernière position)
+Résultat : [B, 2, 3, ..., 52, A, 1]
+
+Opération 4 — Coupe simple :
+Dernière carte = 1 → valeur Bridge = 1
+Prendre 1 carte du dessus (le B) → placer avant le 1
+Résultat : [2, 3, 4, ..., 52, A, B, 1]
+
+Opération 5 — Lecture :
+Première carte = 2 → compter 2 cartes → carte à position 2 = le 4
+Valeur de sortie = 4 (≤ 26) ✓
+
+SORTIE = 4 — correspond au vecteur de test Schneier ✓
+
+===
+CHUNK: key_reuse_attack
+TITLE: Danger de réutilisation de clé — Attaque mathématique
+
+Règle absolue de Schneier : « NEVER USE THE SAME KEY TO ENCRYPT TWO DIFFERENT MESSAGES. »
+
+Si deux messages A et B sont chiffrés avec la même clé K :
+CA = A + K (mod 26)
+CB = B + K (mod 26)
+CA - CB = (A + K) - (B + K) = A - B
+
+La clé K disparaît ! On obtient directement A - B, la différence des textes clairs.
+
+Pourquoi c'est grave :
+- Les langues naturelles ont des fréquences de lettres prévisibles
+- En français : E ≈ 17%, « q » presque toujours suivi de « u »
+- La redondance linguistique permet de reconstruire A et B à partir de A-B
+
+===
+CHUNK: crib_dragging
+TITLE: Attaque par crib-dragging
+
+L'attaque crib-dragging exploite la réutilisation de clé :
+1. L'attaquant suppose un mot probable dans l'un des messages (ex : « BONJOUR », « URGENT »)
+2. Il soustrait ce « crib » (texte supposé) de A-B à chaque position possible
+3. Si le résultat ressemble à du français → le crib est correct à cette position
+4. En itérant, on reconstitue progressivement les deux messages
+
+Conséquence pour Solitaire :
+- Chaque message doit utiliser un état du paquet différent
+- Utiliser la persistance d'état (le paquet évolue entre les messages)
+- Ou un nouveau mot de passe pour chaque message
+- Ne JAMAIS revenir à l'état initial entre deux messages
+
+===
+CHUNK: crowley_bias_detail
+TITLE: Biais statistique de Crowley (1999) — Analyse détaillée
+
+Paul Crowley a publié en 1999 son analyse des faiblesses de Solitaire.
+
+Le biais principal :
+La probabilité que deux lettres CONSÉCUTIVES du keystream soient identiques est ~1/22.5 au lieu de 1/26 attendu pour un générateur parfait.
+
+Mesure statistique (article original de Crowley) :
+Sur 9 999 999 échantillons (passphrase CRYPTONOMICON) : 444 745 coïncidences observées, soit 98.87 écarts-types au-dessus de la moyenne.
+Sur des tests étendus à 26 000 001 échantillons : ~159 écarts-types — les deux valeurs sont cohérentes (la sigma scale avec √N).
+
+Cause principale :
+Quand la carte du dessus est identique sur deux tours consécutifs (~2% des cas), la probabilité que la sortie soit aussi identique monte à ~34% (au lieu de ~3.85%). La structure déterministe des opérations sur les jokers crée cette corrélation.
+
+===
+CHUNK: crowley_non_reversibility
+TITLE: Non-réversibilité du CPRNG Solitaire (Crowley)
+
+Crowley a aussi montré que le CPRNG n'est pas toujours réversible.
+
+Problème :
+Quand le Joker A est en DERNIÈRE position → l'opération 1 le place en 2ème position.
+Quand le Joker A est en PREMIÈRE position... il est en 1ère, mais après l'opération 1, il irait en 2ème.
+Deux états initiaux différents mènent au même état suivant → la bijection est cassée.
+
+Impact pratique :
+- Pour messages courts (quelques centaines de caractères) : sécurité acceptable
+- Pour messages longs : fuite ~0.0005 bits par caractère
+- Un adversaire avec suffisamment de texte chiffré peut exploiter ce biais
+- Schneier recommande de garder les messages courts (quelques milliers de caractères max)
+
+===
+CHUNK: implementation_traps
+TITLE: 12 Pièges d'implémentation critiques
+
+1. Wrapping Joker A : en dernière position → 2ème position (PAS 1ère)
+2. Wrapping Joker B dernière : → 3ème position (PAS 2ème)
+3. Wrapping Joker B avant-dernière : → 2ème position (PAS 1ère)
+4. Modulo 26 = 0 : représente Z (26), jamais A (1)
+5. Dernière carte op.4 : ne bouge JAMAIS (c'est crucial pour la réversibilité)
+6. Sortie joker (op.5) : ignorer et recommencer tout le cycle 1-2-3-4-5
+7. Op.5 ne modifie pas le paquet : lecture seule, aucune modification
+8. Deux systèmes de valeurs : Bridge (1-53) ≠ Chiffrement (1-26)
+9. Ordre op.1 et 2 : TOUJOURS A d'abord, B ensuite
+10. Erreur off-by-one : compter à partir de 1 (algorithme) vs 0 (Python)
+11. Mutation du paquet : travailler sur des COPIES (immutabilité)
+12. Propagation d'erreur : 1 erreur = tout le reste est faux. Valider les vecteurs immédiatement.
+
+Règle d'or : valider les 3 vecteurs officiels de Schneier AVANT toute autre fonctionnalité.
+
+===
+CHUNK: glossary_solitaire
+TITLE: Glossaire du chiffrement Solitaire
+
+Bridge (ordre) : Convention internationale de classement : Trèfle < Carreau < Cœur < Pique.
+
+Chiffrement par flux (Stream cipher) : Algorithme chiffrant caractère par caractère en combinant avec un flux pseudo-aléatoire.
+
+Coupe simple (Count cut) : Opération 4 — prendre N cartes du dessus, placer au-dessus de la dernière.
+
+CPRNG : Cryptographically secure Pseudo-Random Number Generator.
+
+Crib-dragging : Technique d'attaque utilisant des mots supposés quand la clé est réutilisée.
+
+Flux de clés (Keystream) : Séquence pseudo-aléatoire combinée avec le message.
+
+Joker A : Joker noir/petit, valeur 53, décalé d'une position par l'opération 1.
+
+Joker B : Joker rouge/grand, valeur 54, décalé de deux positions par l'opération 2.
+
+Keying : Initialisation du paquet à partir d'un mot de passe.
+
+Masque jetable (OTP) : Chiffrement parfait — clé aléatoire, aussi longue que le message, jamais réutilisée.
+
+OFB (Output Feedback) : Mode où la sortie du générateur est réinjectée dans l'état.
+
+Persistance d'état : Le paquet conserve son état entre les messages successifs.
+
+Pontifex : Nom de code original dans Cryptonomicon.
+
+Triple coupe (Triple cut) : Opération 3 — intervertir les segments au-dessus et au-dessous des jokers.
+
+Valeur Bridge : Numérotation 1 à 53 (jokers = 53) pour les coupes.
+
+Valeur de chiffrement : Numérotation 1 à 26 (Bridge mod 26, si > 26 soustraire 26) pour la sortie.
+
+Wrapping : Une carte en bout de paquet « revient » au début (comportement circulaire avec règles spécifiques).

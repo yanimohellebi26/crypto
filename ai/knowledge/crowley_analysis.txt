@@ -1,0 +1,89 @@
+SOURCE: Paul Crowley — "Problems with Bruce Schneier's Solitaire" (1999)
+URL: http://www.ciphergoth.org/crypto/solitaire/
+NOTE: Contenu téléchargé depuis le site de Paul Crowley. Deux problèmes critiques identifiés dans le CPRNG de Solitaire.
+
+===
+CHUNK: crowley_two_problems
+TITLE: Deux problèmes critiques dans Solitaire — Crowley (1999)
+
+Paul Crowley a identifié deux problèmes significatifs dans le CPRNG de Solitaire :
+
+Problème 1 — Machine d'état non réversible (irreversibility) :
+Le CPRNG de Solitaire n'est PAS réversible, contrairement à ce que la documentation opérationnelle de Schneier affirme. Spécifiquement : "the initial step in which a joker is moved to the top if it is on the bottom cannot be reversed." Cela contredit la conception et compromet potentiellement la sécurité.
+
+Problème 2 — Biais de sortie (statistical bias) :
+La sortie du CPRNG présente un biais statistique mesurable. Des sorties successives identiques devraient se produire approximativement 1 fois sur 26, mais la fréquence observée est d'environ 1 fois sur 22.5 — un écart dramatique indiquant une faiblesse cryptographique sérieuse.
+
+===
+CHUNK: crowley_bias_mechanism
+TITLE: Mécanisme du biais — Analyse de Crowley
+
+Crowley a tracé le biais à des corrélations entre des tours successifs.
+
+Mécanisme principal :
+Quand des valeurs de carte du dessus identiques apparaissent consécutivement (probabilité ~2%), la probabilité de lettres de sortie identiques monte à environ 34%. Cela suggère des corrélations positionnelles plus larges entre les cartes sur des tours successifs, indiquant des problèmes structurels plus profonds au-delà de ce seul facteur identifié.
+
+En chiffres :
+- Attendu pour un générateur parfait : P(output[n] = output[n+1]) = 1/26 ≈ 3.846%
+- Observé pour Solitaire : P(output[n] = output[n+1]) ≈ 1/22.5 ≈ 4.444%
+- Excès : +15.5% de probabilité de répétition consécutive
+
+===
+CHUNK: crowley_statistical_deviation
+TITLE: Mesures statistiques — Magnitude de l'écart (Crowley)
+
+Tests de Crowley — résultats empiriques :
+- Certaines mesures : déviation dépassant 1100 écarts-types — au-delà des tables statistiques normales.
+- Test avec passphrase "CRYPTONOMICON" sur ~10 millions d'échantillons : 98.87 écarts-types au-dessus de la moyenne.
+- Tests étendus à ~26 millions d'échantillons : ~159 écarts-types (cohérent, la sigma scale avec √N).
+
+Interprétation : Ces niveaux de déviation statistique sont absolument impossibles par hasard. Le biais est réel et structurel, pas du bruit aléatoire.
+
+Ressources techniques fournies par Crowley :
+- Implémentation C optimisée pour les tests de performance
+- Implémentation Perl pour le débogage
+- Calculateur de probabilité de distribution normale pour les valeurs de signification extrême
+
+===
+CHUNK: crowley_non_reversibility
+TITLE: Non-réversibilité du CPRNG — Problème structural (Crowley)
+
+Crowley prouve que la machine d'état du CPRNG de Solitaire n'est pas bijective (réversible).
+
+Problème concret :
+Dans l'étape 1 (déplacement du Joker A), quand le Joker A est en DERNIÈRE position, il est placé juste sous la première carte (2ème position). Cette opération ne peut pas être inversée : on ne peut pas déterminer si le Joker A venait de la dernière position ou d'une autre position proche du début.
+
+Conséquence directe :
+Deux états initiaux différents du paquet peuvent produire le même état après un cycle. La fonction d'état n'est pas injective. Schneier supposait que l'algorithme était réversible — Crowley prouve le contraire.
+
+===
+CHUNK: crowley_practical_impact
+TITLE: Impact pratique et conclusion de Crowley
+
+Conclusion de Crowley :
+Malgré son attrait théorique comme chiffrement manuel, Solitaire présente des vulnérabilités cryptographiques critiques qui le rendent inadapté aux vraies applications de sécurité.
+
+Pour des messages courts :
+L'impact est négligeable en pratique. La sécurité reste acceptable pour une utilisation ponctuelle et non critique.
+
+Pour des messages longs :
+Le biais s'accumule. Un adversaire avec suffisamment de texte chiffré peut exploiter le biais pour distinguer le chiffré d'une séquence vraiment aléatoire.
+
+Recommandations :
+- Garder les messages très courts
+- Ne jamais réutiliser une clé
+- Pour les usages modernes sérieux : utiliser AES, ChaCha20 ou d'autres algorithmes rigoureusement analysés
+
+===
+CHUNK: crowley_context
+TITLE: Contexte académique — Crowley et les analyses ultérieures
+
+L'analyse de Crowley (1999) est le premier travail cryptanalytique sérieux sur Solitaire, publié peu après la sortie de Cryptonomicon. Schneier a reconnu les problèmes identifiés.
+
+Analyses ultérieures basées sur les travaux de Crowley :
+- Pogorelov & Pudovkina (2003) : propriétés du semi-groupe de transformation
+- Tounsi et al. (2014) : détection probabiliste de cycles
+- Shiu (2019) : analyse générale
+
+Comparaison avec RC4 :
+RC4 souffre aussi de biais statistiques graves (biais dans les premiers octets), ce qui a conduit à son interdiction dans TLS (RFC 7465, 2015). Le biais de Crowley sur Solitaire est moins grave que les biais de RC4, mais les deux algorithmes sont déconseillés pour les applications modernes.

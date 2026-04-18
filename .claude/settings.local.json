@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(/c/Users/yanim/OneDrive/Documents/projects/crypto/.venv/Scripts/python -m pip show chromadb)",
+      "Bash(/c/Users/yanim/OneDrive/Documents/projects/crypto/.venv/Scripts/python -m pip install chromadb)",
+      "Bash(/c/Users/yanim/OneDrive/Documents/projects/crypto/.venv/Scripts/python -c \"\nimport sys; sys.path.insert\\(0, '.'\\)\nimport warnings; warnings.filterwarnings\\('ignore'\\)\nfrom dotenv import load_dotenv; load_dotenv\\(\\)\nfrom ai.assistant import SolitaireAssistant\na = SolitaireAssistant\\(\\)\nprint\\('Chunks:', a._collection.count\\(\\)\\)\nprint\\('OK - assistant works in venv'\\)\n\" 2>/dev/null)",
+      "Bash(/c/Users/yanim/OneDrive/Documents/projects/crypto/.venv/Scripts/python -m pip show google-generativeai)",
+      "Bash(.venv/Scripts/python -c \"import plotly; import matplotlib; print\\(''plotly ok, matplotlib ok''\\)\")",
+      "Bash(.venv/Scripts/pytest tests/test_integration.py tests/test_performance.py -v --tb=short)",
+      "Bash(.venv/Scripts/pytest -v --tb=short)",
+      "Bash(.venv/Scripts/python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Syntaxe OK''\\)\")",
+      "Bash(.venv/Scripts/python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''Syntaxe OK''\\)\")",
+      "Bash(.venv/Scripts/python -c \":*)",
+      "Bash(.venv/Scripts/pytest --tb=short -q)",
+      "mcp__claude_ai_Canva__get-design",
+      "mcp__claude_ai_Canva__get-design-content",
+      "WebSearch"
+    ]
+  }
+}
