@@ -1,0 +1,21 @@
+[server]
+enableStaticServing = true
+
+[theme]
+primaryColor = "#e0a840"
+backgroundColor = "#1a1d23"
+secondaryBackgroundColor = "#21252e"
+textColor = "#e4e7ed"
+linkColor = "#e0a840"
+borderColor = "#3a4050"
+showWidgetBorder = true
+baseRadius = "0.25rem"
+font = "monospace"
+headingFont = "monospace"
+codeFont = "monospace"
+codeBackgroundColor = "#15181f"
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#1f2329"
+secondaryBackgroundColor = "#262b33"

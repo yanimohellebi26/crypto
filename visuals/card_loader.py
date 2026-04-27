@@ -13,7 +13,13 @@ import base64
 from functools import lru_cache
 from pathlib import Path
 
-ASSETS_DIR = Path(__file__).parent / "output"
+ASSETS_ROOT = Path(__file__).parent
+THEME_DIRS: dict[str, tuple[str, ...]] = {
+  "modern": ("output", "assets"),
+  "classic": ("real_deck",),
+  "academic": ("academic_deck",),  # Pas de fichiers — génération SVG à la volée
+}
+_CARD_THEME = "modern"
 
 RANK_LABELS: tuple[str, ...] = (
     "ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king",
@@ -22,32 +28,32 @@ RANK_SHORT: tuple[str, ...] = (
     "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
 )
 SUIT_SYMBOLS: dict[str, str] = {
-    "clubs": "♣", "diamonds": "♦", "hearts": "♥", "spades": "♠",
+    "clubs": "\u2663", "diamonds": "\u2666", "hearts": "\u2665", "spades": "\u2660",
 }
 SUIT_COLORS: dict[str, str] = {
-    "clubs": "#5a8a6a", "diamonds": "#b85040", "hearts": "#b85040", "spades": "#6a7a90",
+    "clubs": "#5a9a6a", "diamonds": "#c85a4f", "hearts": "#c85a4f", "spades": "#6a7a90",
 }
 HIGHLIGHT_COLORS: dict[str, str] = {
     "joker-a":    "#5a9a6a",
-    "joker-b":    "#b85040",
+    "joker-b":    "#c85a4f",
     "seg-top":    "#5a80a8",
-    "seg-mid":    "#c09840",
+    "seg-mid":    "#e0a840",
     "seg-bot":    "#7070a0",
     "cut-top":    "#7a68a0",
-    "cut-anchor": "#b07838",
-    "output":     "#c09840",
+    "cut-anchor": "#c08838",
+    "output":     "#e0a840",
     "reader":     "#4a8a8a",
 }
 HIGHLIGHT_LABELS: dict[str, tuple[str, str]] = {
-    "joker-a":    ("●", "Joker A"),
-    "joker-b":    ("●", "Joker B"),
-    "seg-top":    ("●", "Segment haut → descend"),
-    "seg-mid":    ("●", "Milieu avec jokers"),
-    "seg-bot":    ("●", "Segment bas → monte"),
-    "cut-top":    ("●", "Cartes déplacées"),
-    "cut-anchor": ("●", "Ancre (dernière carte)"),
-    "output":     ("●", "Valeur de sortie"),
-    "reader":     ("●", "Carte lectrice"),
+    "joker-a":    ("\u25cf", "Joker A"),
+    "joker-b":    ("\u25cf", "Joker B"),
+    "seg-top":    ("\u25cf", "Segment haut \u2192 descend"),
+    "seg-mid":    ("\u25cf", "Milieu avec jokers"),
+    "seg-bot":    ("\u25cf", "Segment bas \u2192 monte"),
+    "cut-top":    ("\u25cf", "Cartes deplacees"),
+    "cut-anchor": ("\u25cf", "Ancre (derniere carte)"),
+    "output":     ("\u25cf", "Valeur de sortie"),
+    "reader":     ("\u25cf", "Carte lectrice"),
 }
 
 
@@ -64,29 +70,89 @@ def _suit_folder(n: int) -> str:
     return "spades"
 
 
-def card_path(n: int) -> Path:
+def _resolve_theme(theme: str | None = None) -> str:
+    """Retourne un thème valide, sinon le thème moderne."""
+    if theme in THEME_DIRS:
+        return theme
+    try:
+        import streamlit as st
+
+        session_theme = st.session_state.get("card_theme")
+        if session_theme in THEME_DIRS:
+            return session_theme
+    except Exception:
+        pass
+    if _CARD_THEME in THEME_DIRS:
+        return _CARD_THEME
+    return "modern"
+
+
+def _theme_asset_dir(theme: str) -> Path:
+    """Retourne le premier dossier d'assets existant pour un thème."""
+    for dirname in THEME_DIRS[theme]:
+        candidate = ASSETS_ROOT / dirname
+        if candidate.exists():
+            return candidate
+    return ASSETS_ROOT / THEME_DIRS[theme][0]
+
+
+def classic_theme_available() -> bool:
+    """Indique si un dossier de cartes classiques est disponible."""
+    return (ASSETS_ROOT / "real_deck").exists()
+
+
+def set_card_theme(theme: str) -> None:
+    """Sélectionne le thème visuel global des cartes.
+
+    Le cache des images est vidé pour éviter de mélanger les decks.
+    """
+    global _CARD_THEME
+    _CARD_THEME = _resolve_theme(theme)
+    card_b64.cache_clear()
+    card_b64_thumb.cache_clear()
+    try:
+        import streamlit as st
+        st.session_state["card_theme"] = _CARD_THEME
+    except Exception:
+        pass
+
+
+def card_path(n: int, theme: str | None = None) -> Path:
     """Chemin absolu vers l'image PNG de la carte n (1-54)."""
+    resolved_theme = _resolve_theme(theme)
+    assets_dir = _theme_asset_dir(resolved_theme)
+    modern_assets_dir = _theme_asset_dir("modern")
     folder = _suit_folder(n)
     if n == 53:
-        return ASSETS_DIR / folder / "53_joker_a.png"
+        candidate = assets_dir / folder / "53_joker_a.png"
+        if candidate.exists() or resolved_theme in ("modern", "classic"):
+            return candidate
+        return modern_assets_dir / folder / "53_joker_a.png"
     if n == 54:
-        return ASSETS_DIR / folder / "54_joker_b.png"
+        candidate = assets_dir / folder / "54_joker_b.png"
+        if candidate.exists() or resolved_theme in ("modern", "classic"):
+            return candidate
+        return modern_assets_dir / folder / "54_joker_b.png"
     rank_idx = (n - 1) % 13
-    return ASSETS_DIR / folder / f"{n:02d}_{RANK_LABELS[rank_idx]}.png"
+    filename = f"{n:02d}_{RANK_LABELS[rank_idx]}.png"
+    candidate = assets_dir / folder / filename
+    if candidate.exists() or resolved_theme in ("modern", "classic"):
+        return candidate
+    return modern_assets_dir / folder / filename
 
 
-@lru_cache(maxsize=56)
-def card_b64(n: int) -> str:
+@lru_cache(maxsize=112)
+def card_b64(n: int, theme: str | None = None) -> str:
     """Image de la carte n encodée en base64 (mis en cache LRU)."""
-    path = card_path(n)
+    path = card_path(n, theme=theme)
     if not path.exists():
         return ""
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
 
-@lru_cache(maxsize=168)  # 56 cartes × 3 tailles
-def card_b64_thumb(n: int, width: int = 120) -> str:
+@lru_cache(maxsize=336)  # 56 cartes × 3 tailles × 2 thèmes
+def card_b64_thumb(n: int, width: int = 120, theme: str | None = None) -> str:
     """Miniature PNG de la carte n avec alpha préservé.
 
     Args:
@@ -96,7 +162,7 @@ def card_b64_thumb(n: int, width: int = 120) -> str:
     Returns:
         Chaîne base64 du PNG redimensionné.
     """
-    path = card_path(n)
+    path = card_path(n, theme=theme)
     if not path.exists():
         return ""
     try:
@@ -111,7 +177,112 @@ def card_b64_thumb(n: int, width: int = 120) -> str:
         return base64.b64encode(buf.getvalue()).decode()
     except (ImportError, OSError, ValueError):
         # PIL absent ou image corrompue → retourner l'image originale non redimensionnée
-        return card_b64(n)
+        return card_b64(n, theme=theme)
+
+
+def _classic_svg_data_uri(n: int, width: int) -> str:
+    """Génère une carte classique SVG en secours (sans assets externes)."""
+    height = int(width * 1.4)
+    corner_size = max(16, int(width * 0.14))
+    symbol_size = max(34, int(width * 0.28))
+
+    if n == 53:
+      rank_text = "JOKER"
+      suit_symbol = "★"
+      suit_color = "#222222"
+    elif n == 54:
+      rank_text = "JOKER"
+      suit_symbol = "☆"
+      suit_color = "#b02020"
+    else:
+      folder = _suit_folder(n)
+      rank_idx = (n - 1) % 13
+      rank_text = RANK_SHORT[rank_idx]
+      suit_symbol = SUIT_SYMBOLS[folder]
+      suit_color = "#b02020" if folder in ("hearts", "diamonds") else "#222222"
+
+    svg = (
+      f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
+      f'<rect x="2" y="2" width="{width - 4}" height="{height - 4}" rx="10" fill="#ffffff" stroke="#222222" stroke-width="3"/>'
+      f'<text x="12" y="{corner_size}" font-family="Georgia, serif" font-size="{corner_size}" fill="{suit_color}" font-weight="700">{rank_text}</text>'
+      f'<text x="12" y="{corner_size + 18}" font-family="Georgia, serif" font-size="18" fill="{suit_color}">{suit_symbol}</text>'
+      f'<text x="{width / 2}" y="{height / 2 + 8}" text-anchor="middle" font-family="Georgia, serif" font-size="{symbol_size}" fill="{suit_color}">{suit_symbol}</text>'
+      f'<g transform="rotate(180 {width / 2} {height / 2})">'
+      f'<text x="12" y="{corner_size}" font-family="Georgia, serif" font-size="{corner_size}" fill="{suit_color}" font-weight="700">{rank_text}</text>'
+      f'<text x="12" y="{corner_size + 18}" font-family="Georgia, serif" font-size="18" fill="{suit_color}">{suit_symbol}</text>'
+      '</g>'
+      '</svg>'
+    )
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def _academic_svg_data_uri(n: int, width: int) -> str:
+    """Carte SVG style académique — fond blanc, typographie propre, bordeaux/encre."""
+    height = int(width * 1.4)
+    pad = max(3, int(width * 0.08))
+    rank_size = max(8, int(width * 0.26))
+    suit_top = max(7, int(width * 0.22))
+    center_size = max(14, int(width * 0.40))
+    pos_size = max(5, int(width * 0.16))
+
+    if n == 53:
+        rank_text, suit_sym = "JKR", "★"
+        ink = "#8a1538"
+        bg1, bg2 = "#ffffff", "#faf4e5"
+    elif n == 54:
+        rank_text, suit_sym = "JKR", "☆"
+        ink = "#1a1a1a"
+        bg1, bg2 = "#ffffff", "#faf4e5"
+    else:
+        folder = _suit_folder(n)
+        rank_idx = (n - 1) % 13
+        rank_text = RANK_SHORT[rank_idx]
+        suit_sym = {"clubs": "♣", "diamonds": "♦",
+                    "hearts": "♥", "spades": "♠"}[folder]
+        ink = "#8a1538" if folder in ("hearts", "diamonds") else "#1a1a1a"
+        bg1, bg2 = "#ffffff", "#ffffff"
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}"'
+        f' viewBox="0 0 {width} {height}">'
+        f'<defs><linearGradient id="bg{n}" x1="0" y1="0" x2="1" y2="1">'
+        f'<stop offset="0%" stop-color="{bg1}"/>'
+        f'<stop offset="100%" stop-color="{bg2}"/>'
+        f'</linearGradient></defs>'
+        f'<rect width="{width}" height="{height}" rx="4" fill="url(#bg{n})"'
+        f' stroke="#bab3a0" stroke-width="1"/>'
+        # Rang coin haut-gauche
+        f'<text x="{pad}" y="{pad + rank_size}" font-family="Inter Tight,Inter,sans-serif"'
+        f' font-size="{rank_size}" font-weight="600" fill="{ink}">{rank_text}</text>'
+        # Symbole sous le rang
+        f'<text x="{pad}" y="{pad + rank_size + suit_top + 1}"'
+        f' font-family="serif" font-size="{suit_top}" fill="{ink}">{suit_sym}</text>'
+        # Grand symbole central
+        f'<text x="{width // 2}" y="{height // 2 + center_size // 3}"'
+        f' text-anchor="middle" font-family="serif" font-size="{center_size}"'
+        f' fill="{ink}" opacity="0.45">{suit_sym}</text>'
+        # Numéro position bas-droite
+        f'<text x="{width - pad}" y="{height - pad}" text-anchor="end"'
+        f' font-family="JetBrains Mono,monospace" font-size="{pos_size}"'
+        f' fill="#a8a39a">{n}</text>'
+        f'</svg>'
+    )
+    enc = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{enc}"
+
+
+def card_img_src(n: int, width: int = 120, theme: str | None = None) -> str:
+    """Retourne une source image prête à l'emploi pour la carte n."""
+    resolved_theme = _resolve_theme(theme)
+    if resolved_theme == "academic":
+        return _academic_svg_data_uri(n, width)
+    b64 = card_b64_thumb(n, width=width, theme=resolved_theme)
+    if b64:
+        return f"data:image/png;base64,{b64}"
+    if resolved_theme == "classic":
+        return _classic_svg_data_uri(n, width)
+    return ""
 
 
 def card_short_name(n: int) -> str:
@@ -195,6 +366,7 @@ def render_deck_grid(
     Compatible avec st.markdown(unsafe_allow_html=True).
     """
     h = highlights or {}
+    theme = _resolve_theme()
     card_h = int(card_width * 1.4)
     rows_html: list[str] = []
 
@@ -203,18 +375,17 @@ def render_deck_grid(
         cells: list[str] = []
         for pos_in_row, card in enumerate(row_cards):
             global_pos = row_start + pos_in_row
-            b64 = card_b64_thumb(card, width=card_width)
+            src = card_img_src(card, width=card_width, theme=theme)
             hl = h.get(card, "")
             bc = HIGHLIGHT_COLORS.get(hl, "transparent")
             border = f"3px solid {bc}" if hl else "2px solid #0f172a"
             glow = f"box-shadow:0 2px 8px rgba(0,0,0,0.4);" if hl else ""
             name = card_short_name(card)
             pos_color = bc if hl else "#334155"
-            img_fmt = "png"
 
             cells.append(
                 f'<td style="padding:3px;text-align:center;vertical-align:top;">'
-                f'<img src="data:image/{img_fmt};base64,{b64}" '
+            f'<img src="{src}" '
                 f'title="{name} — pos {global_pos + 1}" '
                 f'style="width:{card_width}px;height:{card_h}px;object-fit:cover;'
                 f'border-radius:5px;display:block;border:{border};{glow}"/>'
@@ -263,19 +434,19 @@ def render_card_images(
     """
     lbl = labels or {}
     hl = highlight_class or {}
+    theme = _resolve_theme()
     parts: list[str] = []
 
     for card in cards:
         # Utilise la miniature JPEG (réduit ~100× la taille)
-        b64 = card_b64_thumb(card, width=card_width)
-        if not b64:
+        src = card_img_src(card, width=card_width, theme=theme)
+        if not src:
             continue
         label = lbl.get(card, card_short_name(card))
         border_color = HIGHLIGHT_COLORS.get(hl.get(card, ""), "#334155")
-        img_format = "png"
         parts.append(
             f'<div style="display:inline-block;margin:6px;text-align:center;">'
-            f'<img src="data:image/{img_format};base64,{b64}" '
+        f'<img src="{src}" '
             f'style="width:{card_width}px;border-radius:6px;display:block;'
             f'box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid {border_color};"/>'
             f'<div style="font-size:11px;color:#94a3b8;margin-top:4px;">{label}</div>'
@@ -311,12 +482,13 @@ def render_poker_table(
     h = highlights or {}
     dealt = set(dealt_cards or [])
     center = center_cards or []
+    theme = _resolve_theme()
     card_h = int(card_width * 1.4)
 
     # ── Build shoe (draw pile) cards ──
     shoe_cards: list[str] = []
     for pos, card in enumerate(deck):
-        b64 = card_b64_thumb(card, width=card_width)
+        src = card_img_src(card, width=card_width, theme=theme)
         hl_key = h.get(card, "")
         bc = HIGHLIGHT_COLORS.get(hl_key, "transparent")
         is_dealt = card in dealt
@@ -337,7 +509,7 @@ def render_poker_table(
             shoe_cards.append(
                 f'<div style="display:inline-block;margin:2px;vertical-align:top;'
                 f'position:relative;{scale}" title="{name} — pos {pos + 1}">'
-                f'<img src="data:image/png;base64,{b64}" '
+              f'<img src="{src}" '
                 f'style="width:{card_width}px;height:{card_h}px;object-fit:cover;'
                 f'border-radius:6px;border:{border};{glow}'
                 f'opacity:{opacity};transition:all 0.3s ease;"/>'
@@ -356,13 +528,13 @@ def render_poker_table(
         ch = int(cw * 1.4)
         center_parts: list[str] = []
         for card in center:
-            b64 = card_b64_thumb(card, width=cw)
+            src = card_img_src(card, width=cw, theme=theme)
             hl_cls = h.get(card, "")
-            bc = HIGHLIGHT_COLORS.get(hl_cls, "#c09840")
+            bc = HIGHLIGHT_COLORS.get(hl_cls, "#e0a840")
             name = card_short_name(card)
             center_parts.append(
                 f'<div style="display:inline-block;margin:0 10px;text-align:center;">'
-                f'<img src="data:image/png;base64,{b64}" '
+            f'<img src="{src}" '
                 f'style="width:{cw}px;height:{ch}px;object-fit:cover;border-radius:8px;'
                 f'border:2px solid {bc};box-shadow:0 0 20px 6px {bc},0 4px 15px rgba(0,0,0,0.5);"/>'
                 f'<div style="color:{bc};font-family:\'JetBrains Mono\',monospace;font-size:12px;'
@@ -448,7 +620,7 @@ def render_immersive_spotlight(
     center_cards: list[int],
     highlights: dict[int, str],
     op_name: str = "",
-    op_color: str = "#c09840",
+    op_color: str = "#e0a840",
     op_num: int | str = 1,
     card_width: int = 180,
 ) -> str:
@@ -458,17 +630,18 @@ def render_immersive_spotlight(
     Returns a complete HTML document string for st.components.v1.html().
     """
     card_parts: list[str] = []
+    theme = _resolve_theme()
     for i, card in enumerate(center_cards):
-        b64 = card_b64_thumb(card, width=card_width)
-        if not b64:
+        src = card_img_src(card, width=card_width, theme=theme)
+        if not src:
             continue
         hl_key = highlights.get(card, "")
-        bc = HIGHLIGHT_COLORS.get(hl_key, "#c09840")
+        bc = HIGHLIGHT_COLORS.get(hl_key, "#e0a840")
         name = card_short_name(card)
         ch = int(card_width * 1.4)
         card_parts.append(
             f'<div class="card-slot" data-idx="{i}" data-color="{bc}">'
-            f'<img class="card-img" src="data:image/png;base64,{b64}" '
+        f'<img class="card-img" src="{src}" '
             f'style="width:{card_width}px;height:{ch}px;border-color:{bc};" />'
             f'<div class="card-label" style="color:{bc};">{name}</div>'
             f'</div>'
@@ -720,3 +893,4 @@ body{{background:transparent;overflow:hidden;font-family:'Segoe UI',system-ui,sa
 }})();
 </script>
 </body></html>'''
+

@@ -11,9 +11,6 @@ import warnings
 from pathlib import Path
 from typing import Iterator
 
-# Supprimer l'avertissement de dépréciation (FutureWarning) du SDK legacy
-warnings.filterwarnings("ignore", category=FutureWarning, module="google")
-
 from dotenv import load_dotenv
 
 load_dotenv()

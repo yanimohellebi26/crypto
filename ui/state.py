@@ -28,6 +28,9 @@ def init_session_state() -> None:
         "demo_message": "",
         "demo_step_count": 0,
         "demo_keystream_letters": [],
+        "card_theme": "modern",
+        "ui_theme": "dark",
+        "applied_ui_theme": "dark",
     }
     for key, value in defaults.items():
         if key not in st.session_state:

@@ -7,7 +7,7 @@ import streamlit as st
 
 def render() -> None:
     """Point d'entrée du tab Assistant IA."""
-    st.subheader("Assistant IA Cryptographique")
+    st.subheader("Assistant IA")
     _render_intro()
     _init_assistant()
 
@@ -27,10 +27,10 @@ def _render_intro() -> None:
             f"(article Schneier · analyse Crowley · prérequis M1 · fallback)."
         )
     st.markdown(
-        '<p style="color:#94a3b8;font-size:0.9em;">'
-        "NEXUS est un assistant IA spécialisé en chiffrement Solitaire. "
-        "Il utilise un RAG (ChromaDB + Gemini) alimenté par les sources primaires : "
-        "l'article original de Schneier, l'analyse de Crowley (1999) et le document de prérequis M1."
+        '<p style="opacity:0.85;font-size:0.9em;">'
+        "Cet assistant s'appuie sur une architecture RAG (ChromaDB + Gemini) "
+        "alimentée par les sources du projet : l'article original de Schneier, "
+        "l'analyse de Crowley (1999) et le document de prérequis M1."
         + kb_info
         + "</p>",
         unsafe_allow_html=True,
@@ -48,12 +48,6 @@ def _init_assistant() -> None:
 
     with st.spinner("Chargement de l'assistant IA..."):
         try:
-            import importlib
-            import sys
-            for mod_name in list(sys.modules.keys()):
-                if mod_name.startswith("ai.") or mod_name == "ai":
-                    importlib.invalidate_caches()
-                    del sys.modules[mod_name]
             from ai.assistant import SolitaireAssistant
             st.session_state.ai_assistant = SolitaireAssistant()
         except Exception as exc:
@@ -62,7 +56,7 @@ def _init_assistant() -> None:
 
 def _render_error() -> None:
     st.error(f"Erreur d'initialisation de l'assistant : {st.session_state.ai_error}")
-    if st.button("↺ Réessayer", key="ai_retry"):
+    if st.button("Réessayer", key="ai_retry"):
         st.session_state.ai_error = ""
         st.session_state.ai_assistant = None
         st.rerun()
@@ -86,11 +80,11 @@ def _render_message_history() -> None:
     with st.container():
         if not st.session_state.ai_messages:
             st.markdown(
-                '<div style="background:#161b22;border:1px solid #30363d;border-radius:2px;'
-                'padding:20px;color:#30363d;text-align:center;font-family:\'JetBrains Mono\',monospace;'
+                '<div style="background:var(--secondary-background-color, rgba(128,128,128,0.1));'
+                'border-radius:4px;padding:20px;text-align:center;font-family:\'JetBrains Mono\',monospace;'
                 'font-size:0.82em;letter-spacing:0.06em;">'
                 "Posez une question sur le chiffrement Solitaire.<br>"
-                '<span style="color:#21262d;font-size:0.9em;">'
+                '<span style="opacity:0.6;font-size:0.9em;">'
                 "Ex : &laquo;&nbsp;Comment fonctionne la triple coupe&nbsp;?&nbsp;&raquo; &bull; "
                 "&laquo;&nbsp;Quels sont les vecteurs de Schneier&nbsp;?&nbsp;&raquo;</span>"
                 "</div>",
@@ -101,24 +95,24 @@ def _render_message_history() -> None:
         for msg in st.session_state.ai_messages:
             if msg["role"] == "user":
                 st.markdown(
-                    f'<div style="background:#1a2030;border-left:3px solid #5f82a6;'
-                    f'padding:10px 14px;border-radius:2px;margin:6px 0;color:#d8dbe2;'
+                    f'<div style="background:var(--secondary-background-color, rgba(128,128,128,0.1));'
+                    f'border-left:4px solid #5f82a6;padding:10px 14px;border-radius:4px;margin:6px 0;'
                     f"font-family:'JetBrains Mono',monospace;\">"
-                    f'<span style="color:#88a8c5;font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:0.75em;letter-spacing:0.1em;text-transform:uppercase;">Vous</span>'
+                    f'<span style="color:#5f82a6;font-weight:bold;font-size:0.75em;'
+                    f'letter-spacing:0.1em;text-transform:uppercase;">Vous</span>'
                     f'<br>{msg["content"]}</div>',
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
-                    f'<div style="background:#1a2518;border-left:3px solid #5a9a6a;'
-                    f'padding:10px 14px;border-radius:2px;margin:6px 0;">'
+                    f'<div style="background:var(--secondary-background-color, rgba(128,128,128,0.1));'
+                    f'border-left:4px solid #5a9a6a;padding:10px 14px;border-radius:4px;margin:6px 0;">'
                     f'<span style="color:#5a9a6a;font-family:\'JetBrains Mono\',monospace;'
-                    f'font-size:0.75em;letter-spacing:0.1em;text-transform:uppercase;">Solitaire AI</span>'
-                    f'</div>',
+                    f'font-size:0.75em;font-weight:bold;letter-spacing:0.1em;text-transform:uppercase;">'
+                    f'Assistant</span><br/>'
+                    f'{msg["content"]}</div>',
                     unsafe_allow_html=True,
                 )
-                st.markdown(msg["content"])
 
 
 def _render_chat_form() -> None:
@@ -133,7 +127,7 @@ def _render_chat_form() -> None:
         send_col, ctx_col = st.columns([3, 2])
         with send_col:
             submitted = st.form_submit_button(
-                "Envoyer  →",
+                "Envoyer",
                 use_container_width=True,
                 type="primary",
             )
@@ -156,7 +150,7 @@ def _render_chat_form() -> None:
 
     st.session_state.ai_messages.append({"role": "user", "content": question})
 
-    with st.spinner("NEXUS réfléchit..."):
+    with st.spinner("Réflexion en cours..."):
         try:
             response_text = ""
             response_placeholder = st.empty()
@@ -182,12 +176,12 @@ def _render_suggestions() -> None:
     st.markdown("---")
     st.markdown("**Questions fréquentes :**")
     suggestions = [
-        ("♠  Les 5 opérations", "Explique-moi les 5 opérations du chiffrement Solitaire en détail"),
-        ("♦  Espace de clés", "Quelle est la taille de l'espace de clés de Solitaire ? Est-il sûr ?"),
-        ("△  Biais de Crowley", "Qu'est-ce que le biais statistique découvert par Paul Crowley ?"),
-        ("♣  Réutilisation clé", "Pourquoi la réutilisation de clé est-elle dangereuse en Solitaire ?"),
-        ("◆  Tests NIST", "Quels tests NIST s'appliquent au chiffrement Solitaire ?"),
-        ("◈  Solitaire vs AES", "Compare le chiffrement Solitaire avec AES"),
+        ("Les 5 opérations", "Décris les cinq opérations du chiffrement Solitaire."),
+        ("Espace de clés", "Quelle est la taille théorique de l'espace de clés de Solitaire ?"),
+        ("Biais de Crowley", "En quoi consiste le biais statistique mis en évidence par Crowley en 1999 ?"),
+        ("Réutilisation de clé", "Pourquoi la réutilisation d'une même clé compromet-elle Solitaire ?"),
+        ("Tests NIST", "Quels tests du NIST peut-on appliquer au flux de Solitaire ?"),
+        ("Solitaire vs AES", "Compare les propriétés de Solitaire et d'AES."),
     ]
     sugg_cols = st.columns(3)
     for i, (label, question) in enumerate(suggestions):
@@ -200,7 +194,7 @@ def _render_suggestions() -> None:
 def _handle_suggestion(question: str) -> None:
     assistant = st.session_state.ai_assistant
     st.session_state.ai_messages.append({"role": "user", "content": question})
-    with st.spinner("NEXUS réfléchit..."):
+    with st.spinner("Réflexion en cours..."):
         try:
             response_text = ""
             for chunk in assistant.stream_ask(

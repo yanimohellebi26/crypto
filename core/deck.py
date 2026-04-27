@@ -23,6 +23,15 @@ def create_deck() -> tuple[int, ...]:
     return tuple(range(1, DECK_SIZE + 1))
 
 
+def shuffle_deck() -> tuple[int, ...]:
+    """Paquet aléatoirement mélangé — constitue une clé forte."""
+    import secrets
+    cards = list(range(1, DECK_SIZE + 1))
+    rng = secrets.SystemRandom()
+    rng.shuffle(cards)
+    return tuple(cards)
+
+
 def card_to_string(n: int) -> str:
     """Nom lisible d'une carte, ex: 'As de Trèfle'."""
     if n == JOKER_A:

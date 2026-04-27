@@ -3,18 +3,62 @@
 from __future__ import annotations
 
 import streamlit as st
-import streamlit.components.v1 as components
 
-from core.deck import create_deck
+from core.deck import create_deck, shuffle_deck
 from core.encryption import normalize_text, numbers_to_text, text_to_numbers
 from core.keystream import generate_keystream, key_deck
 from ui.components import AppConfig
-from visuals.card_loader import render_deck_chips
+from visuals.card_loader import render_deck_grid
+
+
+def _get_initial_deck(config: AppConfig) -> tuple[int, ...]:
+    """Retourne le deck initial selon la configuration."""
+    if config.initial_deck is not None:
+        return config.initial_deck
+    if config.passphrase:
+        return key_deck(config.passphrase)
+    return create_deck()
+
+
+def _render_deck_section(config: AppConfig, key_suffix: str = "") -> None:
+    """Bouton mélange + expander visuel du deck de départ."""
+    deck = _get_initial_deck(config)
+
+    if config.initial_deck is not None:
+        mode_label = "Clé : paquet aléatoire"
+        mode_color = "#e0a840"
+    elif config.passphrase:
+        mode_label = "Clé : phrase de passe"
+        mode_color = "#5a9a6a"
+    else:
+        mode_label = "Clé : paquet standard (ordre Bridge, 1 à 54)"
+        mode_color = "#64748b"
+
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.markdown(
+            f'<span style="color:{mode_color};font-size:0.9em;">{mode_label}</span>',
+            unsafe_allow_html=True,
+        )
+    with col2:
+        if st.button("Mélanger", key=f"btn_shuffle{key_suffix}",
+                     help="Génère un nouveau paquet aléatoire comme clé"):
+            new_deck = shuffle_deck()
+            st.session_state["applied_initial_deck"] = new_deck
+            st.session_state["cfg_random_deck"] = new_deck
+            st.session_state.pop("cfg_key_mode_input", None)
+            st.rerun()
+
+    with st.expander("Afficher toutes les cartes (54)"):
+        html = render_deck_grid(tuple(deck))
+        st.markdown(html, unsafe_allow_html=True)
 
 
 def render(config: AppConfig) -> None:
     """Point d'entrée du tab Chiffrement."""
     st.subheader("Chiffrement de message")
+    _render_deck_section(config, key_suffix="_enc")
+    st.divider()
 
     plain_text = st.text_area(
         "Message en clair",
@@ -22,7 +66,7 @@ def render(config: AppConfig) -> None:
         height=120,
         key="enc_input",
     )
-    do_encrypt = st.button("Chiffrer  →", type="primary", key="btn_enc")
+    do_encrypt = st.button("Chiffrer", type="primary", key="btn_enc")
 
     if do_encrypt and plain_text.strip():
         _process_encryption(plain_text, config)
@@ -38,9 +82,10 @@ def _process_encryption(plain_text: str, config: AppConfig) -> None:
         return
 
     key_arg = config.passphrase
+    initial_deck = _get_initial_deck(config)
     try:
         cipher_text, final_deck, ks, plain_nums, cipher_nums = _compute(
-            plain_text, normalized, key_arg, config.algorithm,
+            plain_text, normalized, key_arg, config.algorithm, initial_deck,
         )
     except ValueError as e:
         st.error(str(e))
@@ -54,20 +99,21 @@ def _compute(
     normalized: str,
     key_arg: str | None,
     algorithm: str,
+    initial_deck: tuple[int, ...] | None = None,
 ) -> tuple[str, tuple[int, ...], list[int], list[int], list[int]]:
     """Chiffre selon l'algorithme choisi et renvoie tous les détails."""
+    base_deck = initial_deck if initial_deck is not None else (
+        key_deck(key_arg) if key_arg else create_deck()
+    )
     if algorithm == "Solitaire simplifié":
         from core.solitaire_simple import generate_simple_keystream
-        init_deck = key_deck(key_arg) if key_arg else create_deck()
-        final_deck, ks = generate_simple_keystream(init_deck, len(normalized))
+        final_deck, ks = generate_simple_keystream(base_deck, len(normalized))
         plain_nums = text_to_numbers(normalized)
         cipher_nums = [(p + k - 1) % 26 + 1 for p, k in zip(plain_nums, ks)]
         cipher_text = numbers_to_text(cipher_nums)
     else:
-        # On calcule le keystream une seule fois et on dérive tout depuis celui-ci
         plain_nums = text_to_numbers(normalized)
-        init_deck = key_deck(key_arg) if key_arg else create_deck()
-        final_deck, ks = generate_keystream(init_deck, len(plain_nums))
+        final_deck, ks = generate_keystream(base_deck, len(plain_nums))
         cipher_nums = [(p + k - 1) % 26 + 1 for p, k in zip(plain_nums, ks)]
         cipher_text = numbers_to_text(cipher_nums)
 
@@ -109,9 +155,8 @@ def _display_results(
         _render_letter_table(normalized, plain_nums, ks, cipher_nums, cipher_text)
 
     # Paquet final
-    with st.expander("Paquet final"):
-        deck_html = render_deck_chips(final_deck)
-        components.html(deck_html, height=130)
+    with st.expander("Paquet final (54 cartes)"):
+        st.markdown(render_deck_grid(final_deck), unsafe_allow_html=True)
 
 
 def _render_letter_table(
@@ -147,3 +192,5 @@ def _render_letter_table(
         "</table>"
     )
     st.markdown(table_html, unsafe_allow_html=True)
+        
+    st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)

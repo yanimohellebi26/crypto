@@ -5,72 +5,99 @@ from __future__ import annotations
 import streamlit as st
 import streamlit.components.v1 as components
 
+from core.deck import shuffle_deck
+from ui.components import AppConfig
 from ui.demo_engine import EncryptionStep, precompute_encryption_steps
 from ui.styles import DEMO_CSS
 from visuals.card_loader import render_immersive_spotlight, render_poker_table
 
-def render() -> None:
+def render(config: AppConfig) -> None:
     """Point d'entrée du tab Démonstration."""
     st.markdown(DEMO_CSS, unsafe_allow_html=True)
 
     phase = st.session_state.demo_phase
 
     if phase == "input":
-        _render_input_phase()
+        _render_input_phase(config)
     elif phase in ("playing", "finished"):
         _render_playing_phase()
 
 
 
-def _render_input_phase() -> None:
+def _render_input_phase(config: AppConfig) -> None:
     """Formulaire de saisie du mot à chiffrer."""
     st.markdown(
         '<div style="text-align:center;margin:20px 0 10px;">'
         '<span style="font-family:\'JetBrains Mono\',monospace;font-size:1.1em;'
-        'color:#c09840;letter-spacing:0.08em;">♠ TABLE DE DÉMONSTRATION</span></div>',
+        'color:#e0a840;letter-spacing:0.08em;">DÉMONSTRATION PAS À PAS</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown(
         '<div class="demo-bubble">'
-        '<div class="demo-bubble-title" style="color:#c09840;">Comment ça marche</div>'
+        '<div class="demo-bubble-title" style="color:#e0a840;">Principe de la démonstration</div>'
         '<div class="demo-bubble-text">'
-        "Entrez un mot à chiffrer, puis regardez le croupier manipuler les cartes "
-        "pour transformer chaque lettre. Vous verrez les 5 opérations de l'algorithme "
-        "Solitaire de Schneier se dérouler sur la table, carte par carte.</div>"
+        "Saisissez un mot, puis observez les cinq opérations de l'algorithme "
+        "Solitaire (Schneier, 1999) appliquées à chaque lettre. "
+        "Le paquet de 54 cartes est manipulé à chaque étape pour produire "
+        "une valeur de flux qui chiffre la lettre courante.</div>"
         '<div class="demo-bubble-tip">'
-        "C'est comme donner un mot secret à un joueur de poker — "
-        "et observer comment il le chiffre avec son jeu de 54 cartes.</div>"
+        "L'intérêt de cette visualisation est de rendre concrètes les "
+        "permutations qui restent abstraites dans la description théorique.</div>"
         "</div>",
         unsafe_allow_html=True,
     )
 
-    col_word, col_key = st.columns([2, 1])
-    with col_word:
-        demo_word = st.text_input(
-            "Mot à chiffrer",
-            placeholder="Ex: HELLO, CRYPTO, ALICE…",
-            key="demo_word_input",
-            max_chars=20,
-        )
-    with col_key:
-        demo_key = st.text_input(
-            "Clé (optionnel)",
-            placeholder="Ex: FOO",
-            key="demo_key_input",
-        )
+    demo_word = st.text_input(
+        "Mot à chiffrer",
+        placeholder="Ex: HELLO, CRYPTO, ALICE...",
+        key="demo_word_input",
+        max_chars=20,
+    )
+
+    # Deck status
+    if config.initial_deck is not None:
+        deck_label = "Paquet aléatoire (synchronisé avec l'onglet Chiffrement)"
+        deck_color = "#e0a840"
+    elif config.passphrase:
+        deck_label = "Paquet initialisé par phrase de passe"
+        deck_color = "#5a9a6a"
+    else:
+        deck_label = "Paquet standard Bridge (1 à 54)"
+        deck_color = "#64748b"
+
+    st.markdown(
+        f'<span style="color:{deck_color};font-size:0.85em;">Paquet : {deck_label}</span>',
+        unsafe_allow_html=True,
+    )
+
+    col_shuf, col_reset = st.columns(2)
+    with col_shuf:
+        if st.button("Mélanger le paquet", use_container_width=True, key="demo_shuffle"):
+            new_deck = shuffle_deck()
+            st.session_state["applied_initial_deck"] = new_deck
+            st.session_state["cfg_random_deck"] = new_deck
+            st.session_state.pop("cfg_key_mode_input", None)
+            st.rerun()
+    with col_reset:
+        if config.initial_deck is not None or config.passphrase:
+            if st.button("Réinitialiser (paquet standard)", use_container_width=True, key="demo_reset"):
+                st.session_state["applied_initial_deck"] = None
+                st.session_state["applied_passphrase"] = None
+                st.session_state.pop("cfg_key_mode_input", None)
+                st.session_state.pop("cfg_passphrase_input", None)
+                st.rerun()
 
     if st.button(
-        "▶ Lancer la démonstration",
+        "Lancer la démonstration",
         type="primary",
         use_container_width=True,
         key="demo_launch",
     ):
         word = "".join(c for c in (demo_word or "").strip().upper() if c.isalpha())
         if not word:
-            st.warning("Entrez un mot à chiffrer (lettres uniquement).")
+            st.warning("Écrivez un mot à chiffrer (lettres uniquement).")
         else:
-            key_val = demo_key.strip().upper() or None
-            steps = precompute_encryption_steps(word, key_val)
+            steps = precompute_encryption_steps(word, None, config.initial_deck)
             st.session_state.demo_steps = steps
             st.session_state.demo_step_idx = 0
             st.session_state.demo_phase = "playing"
@@ -123,8 +150,8 @@ def _render_cipher_tracker(
         if i < len(cipher_up_to):
             chars_html.append(
                 f'<div style="display:inline-block;text-align:center;margin:0 4px;">'
-                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;color:#8b949e;">{ch}</div>'
-                f'<div style="font-size:1.2em;">↓</div>'
+                f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;color:#9098a8;">{ch}</div>'
+                f'<div style="font-size:1.2em;color:#9098a8;">--</div>'
                 f'<span class="demo-cipher-char demo-cipher-done">{cipher_up_to[i]}</span>'
                 f'</div>'
             )
@@ -132,7 +159,7 @@ def _render_cipher_tracker(
             chars_html.append(
                 f'<div style="display:inline-block;text-align:center;margin:0 4px;">'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;color:#5a9a6a;">{ch}</div>'
-                f'<div style="font-size:1.2em;">↓</div>'
+                f'<div style="font-size:1.2em;color:#5a9a6a;">--</div>'
                 f'<span class="demo-cipher-char demo-cipher-current">?</span>'
                 f'</div>'
             )
@@ -140,14 +167,14 @@ def _render_cipher_tracker(
             chars_html.append(
                 f'<div style="display:inline-block;text-align:center;margin:0 4px;">'
                 f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;color:#484f58;">{ch}</div>'
-                f'<div style="font-size:1.2em;color:#484f58;">↓</div>'
-                f'<span class="demo-cipher-char demo-cipher-pending">·</span>'
+                f'<div style="font-size:1.2em;color:#484f58;">--</div>'
+                f'<span class="demo-cipher-char demo-cipher-pending">.</span>'
                 f'</div>'
             )
 
     st.markdown(
         f'<div style="text-align:center;padding:12px;background:rgba(0,0,0,0.2);'
-        f'border-radius:12px;border:1px solid #30363d;margin-bottom:12px;">'
+        f'border-radius:12px;border:1px solid #3a4050;margin-bottom:12px;">'
         f'<div class="demo-progress-label">Chiffrement en cours</div>'
         f'<div style="display:flex;justify-content:center;align-items:flex-end;flex-wrap:wrap;">'
         f'{"".join(chars_html)}'
@@ -220,11 +247,11 @@ body{{background:transparent;overflow:hidden;font-family:'JetBrains Mono',monosp
   box-shadow:0 25px 80px rgba(0,0,0,0.8);
 }}
 .equation{{
-  font-size:3em;font-weight:800;color:#c09840;
+  font-size:3em;font-weight:800;color:#e0a840;
   animation:revealEq 0.6s cubic-bezier(0.34,1.56,0.64,1);
   letter-spacing:0.05em;
 }}
-.sub{{font-size:0.35em;color:#8a8f9a;letter-spacing:0.12em;text-transform:uppercase;margin-top:8px;}}
+.sub{{font-size:0.35em;color:#9098a8;letter-spacing:0.12em;text-transform:uppercase;margin-top:8px;}}
 @keyframes revealEq{{
   0%{{transform:scale(0.5) translateY(20px);opacity:0;filter:blur(4px);}}
   100%{{transform:scale(1) translateY(0);opacity:1;filter:blur(0);}}
@@ -232,7 +259,7 @@ body{{background:transparent;overflow:hidden;font-family:'JetBrains Mono',monosp
 </style></head><body>
 <div class="scene"><div class="board">
   <div class="equation">{p_char} + {o_val} = {c_char}</div>
-  <div class="sub">Lettre + Flux de clé = Lettre chiffrée</div>
+  <div class="sub">Clair + Flux de clé = Lettre chiffrée</div>
 </div></div>
 </body></html>''', height=260, scrolling=False)
 
@@ -262,18 +289,18 @@ def _render_navigation(idx: int, total_steps: int, phase: str) -> None:
     nav_left, nav_mid, nav_right = st.columns([1, 2, 1])
     with nav_left:
         if idx > 0:
-            if st.button("← Précédent", use_container_width=True, key="demo_prev"):
+            if st.button("Précédent", use_container_width=True, key="demo_prev"):
                 st.session_state.demo_step_idx = idx - 1
                 st.rerun()
     with nav_mid:
         if phase == "finished":
-            if st.button("↻ Recommencer", type="primary", use_container_width=True, key="demo_new"):
+            if st.button("Recommencer", type="primary", use_container_width=True, key="demo_new"):
                 st.session_state.demo_phase = "input"
                 st.session_state.demo_steps = []
                 st.session_state.demo_step_idx = -1
                 st.rerun()
         else:
-            if st.button("→ Suivant", type="primary", use_container_width=True, key="demo_next"):
+            if st.button("Suivant", type="primary", use_container_width=True, key="demo_next"):
                 if idx < total_steps - 1:
                     st.session_state.demo_step_idx = idx + 1
                     st.rerun()
@@ -282,7 +309,7 @@ def _render_navigation(idx: int, total_steps: int, phase: str) -> None:
                     st.rerun()
     with nav_right:
         if phase != "finished" and idx < total_steps - 1:
-            if st.button("» Tout voir", use_container_width=True, key="demo_skip"):
+            if st.button("Tout voir", use_container_width=True, key="demo_skip"):
                 st.session_state.demo_step_idx = total_steps - 1
                 st.session_state.demo_phase = "finished"
                 st.rerun()
@@ -299,10 +326,10 @@ def _render_final_result(steps: list[EncryptionStep], plain: str) -> None:
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;'
         f'color:#8b949e;letter-spacing:0.12em;text-transform:uppercase;">Résultat final</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:2.4em;'
-        f'font-weight:700;color:#c09840;'
+        f'font-weight:700;color:#e0a840;'
         f'margin:8px 0;">{plain} → {final_cipher}</div>'
         f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.7em;'
-        f'color:#8b949e;">Chiffré avec l\'algorithme Solitaire de Schneier</div>'
+        f'color:#9098a8;">Chiffré par l\'algorithme Solitaire (Schneier, 1999)</div>'
         f'</div>',
         unsafe_allow_html=True,
     )

@@ -24,12 +24,12 @@ from visuals.card_loader import card_short_name
 # Couleurs associées à chaque opération (entier 1-5 ou étiquette string)
 OP_COLORS: dict[int | str, str] = {
     1: "#5a9a6a",
-    2: "#b85040",
-    3: "#c09840",
-    4: "#5f82a6",
+    2: "#c85a4f",
+    3: "#e0a840",
+    4: "#6a8fb8",
     5: "#5a9a6a",
-    "retry":   "#b07838",
-    "encrypt": "#c09840",
+    "retry":   "#c08838",
+    "encrypt": "#e0a840",
 }
 
 
@@ -53,14 +53,14 @@ class EncryptionStep:
 
 
 def precompute_encryption_steps(
-    plain_text: str, key: str | None
+    plain_text: str, key: str | None, initial_deck: tuple[int, ...] | None = None,
 ) -> list[EncryptionStep]:
     """Pré-calcule toutes les sous-étapes du chiffrement."""
     normalized = normalize_text(plain_text)
     if not normalized:
         return []
 
-    deck = key_deck(key) if key else create_deck()
+    deck = initial_deck if initial_deck is not None else (key_deck(key) if key else create_deck())
     plain_nums = text_to_numbers(normalized)
     steps: list[EncryptionStep] = []
     cipher_so_far = ""
@@ -153,10 +153,10 @@ def _op1_move_joker_a(
     step = EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num=1,
-        op_name="Op 1 — Déplacement du Joker Noir",
-        op_desc=f"Le Joker A glisse de la position {old_pos} → {new_pos}",
+        op_name="Op. 1 — Déplacement du Joker A",
+        op_desc=f"Le Joker A passe de la position {old_pos} à la position {new_pos}.",
         op_color=OP_COLORS[1],
-        op_tip="Le Joker A (♠) descend d'une place. S'il est dernier, il passe en 2ème.",
+        op_tip="Le Joker A descend d'une position dans le paquet. S'il se trouve en dernière place, il revient en deuxième.",
         deck_before=deck_before, deck_after=deck,
         center_cards=center,
         highlights={JOKER_A: "joker-a"},
@@ -184,10 +184,10 @@ def _op2_move_joker_b(
     step = EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num=2,
-        op_name="Op 2 — Plongée du Joker Rouge",
-        op_desc=f"Le Joker B descend de 2 positions : {old_pos} → {new_pos}",
+        op_name="Op. 2 — Déplacement du Joker B",
+        op_desc=f"Le Joker B passe de la position {old_pos} à la position {new_pos} (déplacement de 2).",
         op_color=OP_COLORS[2],
-        op_tip="Le Joker B (♥) descend de 2 places avec wrap circulaire.",
+        op_tip="Le Joker B descend de deux positions avec retour circulaire.",
         deck_before=deck_before, deck_after=deck,
         center_cards=center,
         highlights={JOKER_B: "joker-b"},
@@ -219,10 +219,10 @@ def _op3_triple_cut(
     step = EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num=3,
-        op_name="Op 3 — Triple Coupe",
-        op_desc=f"{n_top} cartes du dessus ↔ {n_bot} du dessous. Les jokers restent au milieu.",
+        op_name="Op. 3 — Triple coupe",
+        op_desc=f"{n_top} carte(s) au-dessus du premier joker et {n_bot} en dessous du second sont échangées.",
         op_color=OP_COLORS[3],
-        op_tip="On soulève le paquet en 3 tas et on échange le haut et le bas.",
+        op_tip="Le paquet est coupé en trois segments : les portions extérieures aux jokers permutent.",
         deck_before=deck_before, deck_after=deck,
         center_cards=[JOKER_A, JOKER_B],
         highlights=highlights,
@@ -247,10 +247,10 @@ def _op4_count_cut(
     step = EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num=4,
-        op_name="Op 4 — Coupe du Croupier",
-        op_desc=f"La carte du fond ({card_short_name(anchor)}, val={n_val}) dicte la coupe.",
+        op_name="Op. 4 — Coupe comptée",
+        op_desc=f"La dernière carte ({card_short_name(anchor)}, valeur {n_val}) détermine le nombre de cartes déplacées.",
         op_color=OP_COLORS[4],
-        op_tip=f"Les {n_val} premières cartes passent juste au-dessus de la carte ancre.",
+        op_tip=f"Les {n_val} premières cartes sont insérées juste au-dessus de la carte ancre (dernière).",
         deck_before=deck_before, deck_after=deck,
         center_cards=[anchor],
         highlights=highlights,
@@ -277,14 +277,14 @@ def _op5_read_output(
     step = EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num=5,
-        op_name="Op 5 — Lecture de la carte de sortie",
+        op_name="Op. 5 — Lecture de la valeur de sortie",
         op_desc=(
-            f"1ère carte = {card_short_name(reader)} (val {n_read})"
-            f" → on compte {n_read} → {out_name}"
-            + (f" = {output_val}" if output_val else " = Joker ! On recommence.")
+            f"Première carte : {card_short_name(reader)} (valeur {n_read})"
+            f", on compte {n_read} positions pour atteindre {out_name}"
+            + (f" = {output_val}" if output_val else ". C'est un joker : on recommence.")
         ),
         op_color=OP_COLORS[5],
-        op_tip="On regarde la 1ère carte, on compte sa valeur, et on lit la carte à cette position.",
+        op_tip="On examine la première carte du paquet, on compte sa valeur Bridge et on lit la carte à cette position.",
         deck_before=deck, deck_after=deck,
         center_cards=center,
         highlights=highlights,
@@ -321,13 +321,13 @@ def _retry_until_non_joker(
         retry_steps.append(EncryptionStep(
             letter_idx=letter_idx, plain_char=char,
             op_num="retry",
-            op_name="Cycle supplémentaire — Joker en sortie",
+            op_name="Cycle supplémentaire — joker en sortie",
             op_desc=(
-                f"Résultat : {out_name}"
-                + (f" = {output_val}" if output_val else " → encore un cycle…")
+                f"Résultat : {out_name}"
+                + (f" = {output_val}" if output_val else ", un nouveau cycle est nécessaire.")
             ),
             op_color=OP_COLORS["retry"],
-            op_tip="Quand un joker sort, on refait un cycle complet automatiquement.",
+            op_tip="Lorsqu'un joker apparaît en sortie, l'algorithme effectue un cycle complet supplémentaire.",
             deck_before=deck_before, deck_after=deck,
             center_cards=center,
             highlights=highlights,
@@ -356,10 +356,10 @@ def _encrypt_step(
     return EncryptionStep(
         letter_idx=letter_idx, plain_char=char,
         op_num="encrypt",
-        op_name=f"Chiffrement de la lettre « {char} »",
-        op_desc=f"{char} ({p_num}) + flux ({ks_val}) = {c_num} → {cipher_char}",
+        op_name=f"Chiffrement de la lettre « {char} »",
+        op_desc=f"{char} ({p_num}) + flux ({ks_val}) = {c_num}, soit {cipher_char}.",
         op_color=OP_COLORS["encrypt"],
-        op_tip="On additionne la valeur de la lettre et la valeur du flux (modulo 26).",
+        op_tip="La valeur numérique de la lettre est additionnée à la valeur du flux, modulo 26.",
         deck_before=deck, deck_after=deck,
         center_cards=[],
         highlights={},

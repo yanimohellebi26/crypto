@@ -15,7 +15,8 @@
       "Bash(.venv/Scripts/pytest --tb=short -q)",
       "mcp__claude_ai_Canva__get-design",
       "mcp__claude_ai_Canva__get-design-content",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:api.anthropic.com)"
     ]
   }
 }
