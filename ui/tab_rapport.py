@@ -820,6 +820,9 @@ def _render_s7() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
+        _chi2_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "chi2_graph.png"
+        if _chi2_img.exists():
+            st.image(str(_chi2_img), caption="Distribution des valeurs du flux Solitaire (1 000 échantillons) — test d'uniformité χ².", use_container_width=True)
     with col2:
         st.markdown("**Réutilisation de clé**")
         st.markdown(
@@ -851,6 +854,11 @@ def _render_s7() -> None:
         ),
         unsafe_allow_html=True,
     )
+
+    _avalanche_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "avalanche_graph.png"
+    if _avalanche_img.exists():
+        st.markdown('<div class="sp-16"></div>', unsafe_allow_html=True)
+        st.image(str(_avalanche_img), caption="Effet avalanche : % de valeurs du flux modifiées selon la distance de modification de la clé. Convergence vers ~50% dès la 2ᵉ modification.", use_container_width=True)
 
 
 def _render_s8() -> None:
@@ -933,6 +941,16 @@ def _render_s8() -> None:
             "</tbody></table>",
             unsafe_allow_html=True,
         )
+
+    # Graphique de complexité O(n)
+    from pathlib import Path
+    _complexite_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "complexite_graph.png"
+    if _complexite_img.exists():
+        st.markdown('<div class="sp-24"></div>', unsafe_allow_html=True)
+        st.markdown("**Complexité temporelle O(n) — mesures expérimentales**")
+        st.image(str(_complexite_img),
+                 caption="Temps d'exécution (échelle log-log) en fonction du nombre de caractères : linéarité confirmée de 1 à 10 000 caractères.",
+                 use_container_width=True)
 
 
 def _render_s9() -> None:
