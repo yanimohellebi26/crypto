@@ -677,7 +677,9 @@ def _render_s5() -> None:
     st.markdown('<div class="sp-24"></div>', unsafe_allow_html=True)
     _img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "app_deskcarteclassique.png"
     if _img.exists():
-        st.image(str(_img), caption="Interface de chiffrement — paquet de 54 cartes en thème classique (réaliste).", use_container_width=True)
+        _c1, _ci, _c3 = st.columns([1, 8, 1])
+        with _ci:
+            st.image(str(_img), caption="Interface de chiffrement — paquet de 54 cartes en thème classique (réaliste).", use_container_width=True)
 
     # Carte générée à titre d'exemple
     _king = Path(__file__).parent.parent / "docs" / "rapport_assets" / "13_king.png"
@@ -777,9 +779,11 @@ def _render_s6() -> None:
 
     _interp_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "app_interpretationanalsye.png"
     if _interp_img.exists():
-        st.image(str(_interp_img),
-                 caption="Interprétation IA des résultats statistiques par Gemini 2.5 Pro : synthèse académique du chi2, de l'entropie et du test des runs.",
-                 use_container_width=True)
+        _c1, _ci, _c3 = st.columns([1, 8, 1])
+        with _ci:
+            st.image(str(_interp_img),
+                     caption="Interprétation IA des résultats statistiques par Gemini 2.5 Pro : synthèse académique du chi2, de l'entropie et du test des runs.",
+                     use_container_width=True)
 
 
 def _render_s7() -> None:
@@ -794,7 +798,7 @@ def _render_s7() -> None:
         '<div class="rp-prose" style="font-size:15px;margin-bottom:24px;">'
         "L'onglet <strong>Analyse</strong> de cette application permet d'exécuter en temps réel "
         "des tests statistiques rigoureux sur le flux de clés généré par Solitaire. Les calculs "
-        "incluent l'entropie de Shannon $H(X)$, l'indice de coïncidence, l'autocorrélation $C(\\tau)$, "
+        "incluent l'entropie de Shannon <em>H</em>(<em>X</em>), l'indice de coïncidence, l'autocorrélation <em>C</em>(τ), "
         "et le test des runs du NIST."
         "</div>",
         unsafe_allow_html=True,
@@ -804,16 +808,18 @@ def _render_s7() -> None:
     from pathlib import Path
     _analyse_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "app_analyse.png"
     if _analyse_img.exists():
-        st.image(str(_analyse_img),
-                 caption="Onglet Analyse : distribution empirique, autocorrelation C(tau), entropie de Shannon et indice de coincidence -- calculs en temps reel sur le flux Solitaire.",
-                 use_container_width=True)
+        _c1, _ci, _c3 = st.columns([1, 8, 1])
+        with _ci:
+            st.image(str(_analyse_img),
+                     caption="Onglet Analyse : distribution empirique, autocorrélation C(τ), entropie de Shannon et indice de coïncidence — calculs en temps réel sur le flux Solitaire.",
+                     use_container_width=True)
     st.markdown('<div class="sp-24"></div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2, gap="large")
     with col1:
         st.markdown("**Biais de Crowley (1999)**")
         st.markdown(
             '<div class="rp-prose" style="font-size:15px;">'
-            "Contrairement à une distribution uniforme où $\\Pr[K_2 = K_1] = 1/26$, "
+            "Contrairement à une distribution uniforme où Pr[K₂ = K₁] = 1/26, "
             "le biais inhérent aux coupes de Solitaire donne :"
             "</div>",
             unsafe_allow_html=True,
@@ -821,7 +827,7 @@ def _render_s7() -> None:
         st.latex(r"\Pr[K_2 = K_1] \approx \frac{1}{22{,}5}")
         st.markdown(
             '<div class="rp-prose" style="font-size:15px;">'
-            "Cet écart significatif (>15%) devient mesurable via un test du $\\chi^2$ "
+            "Cet écart significatif (&gt;15&nbsp;%) devient mesurable via un test du χ² "
             "dès que l'échantillon dépasse quelques milliers de caractères."
             "</div>",
             unsafe_allow_html=True,
@@ -843,7 +849,7 @@ def _render_s7() -> None:
         st.markdown(
             '<div class="rp-prose" style="font-size:15px;">'
             "L'adversaire obtient la différence mathématique des clairs sans "
-            "connaître le flux $K$. Cela permet une attaque par texte clair connu "
+            "connaître le flux <em>K</em>. Cela permet une attaque par texte clair connu "
             "ou deviné."
             "</div>",
             unsafe_allow_html=True,
@@ -851,9 +857,15 @@ def _render_s7() -> None:
 
     st.markdown(
         _callout(
-            "<strong>Crib-dragging :</strong> en supposant qu'un mot $w$ apparaît dans $M_1$, "
-            "on glisse $w$ sur chaque position $j$ pour déduire un fragment de $M_2$ : "
-            "<br/><center>$M_2[j:j+k] = w - (C_1 - C_2)[j:j+k] \\pmod{26}$</center><br/>"
+            "<strong>Crib-dragging :</strong> en supposant qu'un mot <em>w</em> apparaît dans "
+            "<em>M</em><sub>1</sub>, on glisse <em>w</em> sur chaque position <em>j</em> "
+            "pour déduire un fragment de <em>M</em><sub>2</sub> :"
+            "<div style='text-align:center;font-family:var(--rp-mono);font-size:13px;"
+            "background:rgba(0,0,0,0.06);padding:8px 12px;border-radius:2px;margin:10px 0;"
+            "letter-spacing:0.03em;'>"
+            "M<sub>2</sub>[j : j+k] &nbsp;=&nbsp; w &minus; (C<sub>1</sub> &minus; C<sub>2</sub>)"
+            "[j : j+k] &nbsp;&nbsp;(mod 26)"
+            "</div>"
             "Un score fondé sur les probabilités d'apparition des lettres valide l'hypothèse.",
             label="Attaque par texte supposé",
             variant="warn",
@@ -864,7 +876,9 @@ def _render_s7() -> None:
     _avalanche_img = Path(__file__).parent.parent / "docs" / "rapport_assets" / "avalanche_graph.png"
     if _avalanche_img.exists():
         st.markdown('<div class="sp-16"></div>', unsafe_allow_html=True)
-        st.image(str(_avalanche_img), caption="Effet avalanche : % de valeurs du flux modifiées selon la distance de modification de la clé. Convergence vers ~50% dès la 2ᵉ modification.", use_container_width=True)
+        _c1, _ci, _c3 = st.columns([2, 6, 2])
+        with _ci:
+            st.image(str(_avalanche_img), caption="Effet avalanche : % de valeurs du flux modifiées selon la distance de modification de la clé. Convergence vers ~50% dès la 2ᵉ modification.", use_container_width=True)
 
 
 def _render_s8() -> None:
@@ -954,9 +968,11 @@ def _render_s8() -> None:
     if _complexite_img.exists():
         st.markdown('<div class="sp-24"></div>', unsafe_allow_html=True)
         st.markdown("**Complexité temporelle O(n) — mesures expérimentales**")
-        st.image(str(_complexite_img),
-                 caption="Temps d'exécution (échelle log-log) en fonction du nombre de caractères : linéarité confirmée de 1 à 10 000 caractères.",
-                 use_container_width=True)
+        _c1, _ci, _c3 = st.columns([2, 6, 2])
+        with _ci:
+            st.image(str(_complexite_img),
+                     caption="Temps d'exécution (échelle log-log) en fonction du nombre de caractères : linéarité confirmée de 1 à 10 000 caractères.",
+                     use_container_width=True)
 
 
 def _render_s9() -> None:
