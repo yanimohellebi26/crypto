@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 _RAPPORT_PATH = Path(__file__).parent.parent / "docs" / "RAPPORT.md"
+_RAPPORT_PDF_PATH = Path(__file__).parent.parent / "docs" / "rapport_final.pdf"
 
 # ── CSS du rapport ─────────────────────────────────────────────────────────────
 _CSS = """
@@ -15,7 +16,7 @@ _CSS = """
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ── Variables ── */
-.rp {
+:root, .rp {
   --rp-bg:       #faf8f3;
   --rp-card:     #ffffff;
   --rp-sunken:   #f2efe7;
@@ -333,6 +334,12 @@ def _load_raw() -> str:
     return _RAPPORT_PATH.read_text(encoding="utf-8")
 
 
+def _load_pdf() -> bytes | None:
+    if not _RAPPORT_PDF_PATH.exists():
+        return None
+    return _RAPPORT_PDF_PATH.read_bytes()
+
+
 # ── Section renderers ─────────────────────────────────────────────────────────
 
 def _render_topbar() -> None:
@@ -484,7 +491,7 @@ def _render_s2() -> None:
                 f'<div style="font-family:var(--rp-sans);font-size:12px;font-weight:600;'
                 f'color:{op_colors[i]};margin-bottom:6px;">{title}</div>'
                 f'<div style="font-family:var(--rp-sans);font-size:12.5px;line-height:1.5;'
-                f'color:var(--rp-ink2);">{desc}</div>'
+                f'color:#1f2937;">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1101,15 +1108,31 @@ def render() -> None:
 
     # ── Download bar ──
     raw = _load_raw()
-    if raw:
-        col_dl, _ = st.columns([1, 5])
-        with col_dl:
-            st.download_button(
-                label="Télécharger .md",
-                data=raw.encode("utf-8"),
-                file_name="rapport_solitaire.md",
-                mime="text/markdown",
-            )
+    pdf_data = _load_pdf()
+    if raw or pdf_data is not None:
+        col_md, col_pdf, _ = st.columns([1, 1, 4])
+        with col_md:
+            if raw:
+                st.download_button(
+                    label="Télécharger .md",
+                    data=raw.encode("utf-8"),
+                    file_name="rapport_solitaire.md",
+                    mime="text/markdown",
+                )
+        with col_pdf:
+            if pdf_data is not None:
+                st.download_button(
+                    label="Télécharger .pdf",
+                    data=pdf_data,
+                    file_name="rapport_solitaire.pdf",
+                    mime="application/pdf",
+                )
+            else:
+                st.button(
+                    "PDF indisponible",
+                    disabled=True,
+                    help="Ajoutez docs/rapport_final.pdf pour activer ce téléchargement.",
+                )
 
     # ── Hero ──
     _render_hero()
