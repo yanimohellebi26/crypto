@@ -27,7 +27,7 @@ st.set_page_config(
 init_session_state()
 
 # Injection du CSS selon le thème actif
-ui_theme = st.session_state.get("ui_theme", "dark")
+ui_theme = st.session_state.get("ui_theme", "light")
 st.markdown(get_main_css(ui_theme), unsafe_allow_html=True)
 
 config = render_sidebar()

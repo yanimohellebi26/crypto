@@ -47,7 +47,7 @@ def render_sidebar() -> AppConfig:
     if "applied_card_theme" not in st.session_state:
         st.session_state["applied_card_theme"] = st.session_state.get("card_theme", "modern")
     if "applied_ui_theme" not in st.session_state:
-        st.session_state["applied_ui_theme"] = st.session_state.get("ui_theme", "dark")
+        st.session_state["applied_ui_theme"] = st.session_state.get("ui_theme", "light")
 
     # ── Valeurs des widgets (ce que l'utilisateur a saisi) ──
     if "cfg_algorithm_input" not in st.session_state:
@@ -66,7 +66,7 @@ def render_sidebar() -> AppConfig:
         st.session_state["cfg_card_theme_input"] = _CARD_THEME_REVERSE.get(applied_ct, "Moderne (sombre)")
     if "cfg_ui_theme_input" not in st.session_state:
         applied_ut = st.session_state["applied_ui_theme"]
-        st.session_state["cfg_ui_theme_input"] = _UI_THEME_REVERSE.get(applied_ut, "Sombre")
+        st.session_state["cfg_ui_theme_input"] = _UI_THEME_REVERSE.get(applied_ut, "Clair")
 
     with st.sidebar:
         st.markdown("## Configuration")
@@ -181,7 +181,7 @@ def render_sidebar() -> AppConfig:
             )
 
         st.divider()
-        footer_color = "#3a4050" if st.session_state.get("ui_theme", "dark") == "dark" else "#000000"
+        footer_color = "#3a4050" if st.session_state.get("ui_theme", "light") == "dark" else "#000000"
         st.markdown(
             f'<div style="font-size:10px;color:{footer_color};font-family:\'JetBrains Mono\',monospace;'
             f'letter-spacing:0.06em;padding-top:10px;">'
@@ -201,7 +201,7 @@ def render_sidebar() -> AppConfig:
 
 def render_header() -> None:
     """Affiche le titre de l'application (adapté au thème courant)."""
-    ui_theme = st.session_state.get("ui_theme", "dark")
+    ui_theme = st.session_state.get("ui_theme", "light")
     if ui_theme == "light":
         st.markdown(
             '<h1 class="term-title"><em>Pontifex</em> — Solitaire</h1>',

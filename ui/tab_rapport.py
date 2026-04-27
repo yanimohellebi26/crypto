@@ -16,7 +16,7 @@ _CSS = """
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ── Variables ── */
-:root, .rp {
+.rp {
   --rp-bg:       #faf8f3;
   --rp-card:     #ffffff;
   --rp-sunken:   #f2efe7;
@@ -491,7 +491,7 @@ def _render_s2() -> None:
                 f'<div style="font-family:var(--rp-sans);font-size:12px;font-weight:600;'
                 f'color:{op_colors[i]};margin-bottom:6px;">{title}</div>'
                 f'<div style="font-family:var(--rp-sans);font-size:12.5px;line-height:1.5;'
-                f'color:#1f2937;">{desc}</div>'
+                f'color:var(--rp-ink2);">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
