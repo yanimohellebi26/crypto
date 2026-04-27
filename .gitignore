@@ -16,4 +16,3 @@ build/
 *.egg
 .streamlit/secrets.toml
 *.log
-docs/
