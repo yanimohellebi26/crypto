@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
+import pandas as pd
 
 from core.deck import create_deck, shuffle_deck
 from core.encryption import normalize_text, numbers_to_text, text_to_numbers
