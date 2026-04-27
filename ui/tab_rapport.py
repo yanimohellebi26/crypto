@@ -1103,36 +1103,37 @@ def render() -> None:
     # Conteneur principal avec les variables CSS du design
     st.markdown('<div class="rp">', unsafe_allow_html=True)
 
-    # ── Topbar ──
-    _render_topbar()
-
     # ── Download bar ──
     raw = _load_raw()
     pdf_data = _load_pdf()
-    if raw or pdf_data is not None:
-        col_md, col_pdf, _ = st.columns([1, 1, 4])
-        with col_md:
-            if raw:
-                st.download_button(
-                    label="Télécharger .md",
-                    data=raw.encode("utf-8"),
-                    file_name="rapport_solitaire.md",
-                    mime="text/markdown",
-                )
-        with col_pdf:
-            if pdf_data is not None:
-                st.download_button(
-                    label="Télécharger .pdf",
-                    data=pdf_data,
-                    file_name="rapport_solitaire.pdf",
-                    mime="application/pdf",
-                )
-            else:
-                st.button(
-                    "PDF indisponible",
-                    disabled=True,
-                    help="Ajoutez docs/rapport_final.pdf pour activer ce téléchargement.",
-                )
+    col_md, col_pdf, _ = st.columns([1, 1, 4])
+    with col_md:
+        if raw:
+            st.download_button(
+                label=" Télécharger .md",
+                data=raw.encode("utf-8"),
+                file_name="rapport_solitaire.md",
+                mime="text/markdown",
+            )
+        else:
+            st.button(" .md indisponible", disabled=True)
+    with col_pdf:
+        if pdf_data is not None:
+            st.download_button(
+                label=" Télécharger .pdf",
+                data=pdf_data,
+                file_name="rapport_solitaire.pdf",
+                mime="application/pdf",
+            )
+        else:
+            st.button(
+                " PDF indisponible",
+                disabled=True,
+                help="Ajoutez docs/rapport_final.pdf pour activer ce téléchargement.",
+            )
+
+    # ── Topbar ──
+    _render_topbar()
 
     # ── Hero ──
     _render_hero()
