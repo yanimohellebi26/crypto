@@ -168,6 +168,18 @@ def _render_letter_table(
     cipher_text: str,
 ) -> None:
     """Génère et affiche le tableau HTML lettre par lettre."""
+    data = [
+        {
+            "#": i + 1,
+            "Clair": normalized[i],
+            "Valeur": plain_nums[i],
+            "Flux": ks[i],
+            "Somme": cipher_nums[i],
+            "Chiffré": cipher_text[i],
+        }
+        for i in range(len(normalized))
+    ]
+
     rows = "".join(
         f"<tr>"
         f'<td style="color:#64748b">{i + 1}</td>'
