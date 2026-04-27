@@ -8,22 +8,22 @@ from pathlib import Path
 import streamlit as st
 
 _RAPPORT_PATH = Path(__file__).parent.parent / "docs" / "RAPPORT.md"
-_RAPPORT_PDF_PATH = Path(__file__).parent.parent / "docs" / "rapport_final.pdf"
+_RAPPORT_PDF_PATH = Path(__file__).parent.parent / "rapport.pdf"
 
 # ── CSS du rapport ─────────────────────────────────────────────────────────────
 _CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* ── Variables ── */
-.rp {
+/* ── Variables — defined at :root so var() resolves in every Streamlit widget ── */
+:root {
   --rp-bg:       #faf8f3;
   --rp-card:     #ffffff;
   --rp-sunken:   #f2efe7;
-  --rp-ink:      #000000;
-  --rp-ink2:     #000000;
-  --rp-mute:     #000000;
-  --rp-faint:    #000000;
+  --rp-ink:      #1a1a1a;
+  --rp-ink2:     #2a2a2a;
+  --rp-mute:     #555555;
+  --rp-faint:    #888888;
   --rp-rule:     #d8d3c5;
   --rp-rule-s:   #bab3a0;
   --rp-accent:   #8a1538;
@@ -271,8 +271,11 @@ _CSS = """
 .rp-test-ok { color:var(--rp-ok); font-weight:600; font-size:11px; font-family:var(--rp-sans); }
 .rp-test-code { font-family:var(--rp-mono); font-size:12px; letter-spacing:0.06em; }
 
-/* ── Spacers ── */
-.rp .sp-24 { height:24px; } .rp .sp-32 { height:32px; } .rp .sp-48 { height:48px; }
+/* ── Spacers — global (no .rp ancestor required in Streamlit DOM) ── */
+.sp-16, .rp .sp-16 { height:16px; }
+.sp-24, .rp .sp-24 { height:24px; }
+.sp-32, .rp .sp-32 { height:32px; }
+.sp-48, .rp .sp-48 { height:48px; }
 </style>
 """
 
@@ -348,6 +351,10 @@ def _render_topbar() -> None:
         '<div class="rp-brand">'
         '<div class="mark"><strong>Pontifex</strong>&nbsp;·&nbsp;<em>chiffrement Solitaire</em></div>'
         '<span class="rp-chip">Rapport de projet</span>'
+        "</div>"
+        '<div class="rp-meta">'
+        "Cryptographie — M1 Informatique<br/>"
+        "Université de Bourgogne — 2024–2025"
         "</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -483,7 +490,7 @@ def _render_s2() -> None:
         with cols[i]:
             st.markdown(
                 f'<div style="background:{op_bgs[i]};border:1px solid {op_colors[i]}33;'
-                f'padding:16px;height:100%;">'
+                f'padding:16px;min-height:240px;box-sizing:border-box;">'
                 f'<div style="display:inline-flex;align-items:center;justify-content:center;'
                 f'width:26px;height:26px;border-radius:50%;background:{op_colors[i]};'
                 f'color:#fff;font-family:var(--rp-mono);font-size:12px;font-weight:700;'
@@ -624,7 +631,6 @@ def _render_s4() -> None:
 
 def _render_s5() -> None:
     from pathlib import Path
-    import base64
 
     st.markdown(
         _section_head(5, "Visuels — génération des 54 cartes",
@@ -1032,7 +1038,7 @@ def _render_s10() -> None:
     for i, (label, desc) in enumerate(limits):
         with cols[i]:
             st.markdown(
-                f'<div class="rp-panel" style="height:100%;">'
+                f'<div class="rp-panel" style="min-height:160px;box-sizing:border-box;">'
                 f'<div class="rp-eyebrow" style="color:var(--rp-err,#8a1515);">{label}</div>'
                 f'<div style="font-family:var(--rp-sans);font-size:13px;line-height:1.6;'
                 f'color:var(--rp-ink2);margin-top:8px;">{desc}</div>'
@@ -1118,9 +1124,6 @@ def render() -> None:
     """Affiche le rapport complet style éditorial académique."""
     st.markdown(_CSS, unsafe_allow_html=True)
 
-    # Conteneur principal avec les variables CSS du design
-    st.markdown('<div class="rp">', unsafe_allow_html=True)
-
     # ── Download bar ──
     raw = _load_raw()
     pdf_data = _load_pdf()
@@ -1179,5 +1182,3 @@ def render() -> None:
     _render_s9()
     st.divider()
     _render_s10()
-
-    st.markdown("</div>", unsafe_allow_html=True)
