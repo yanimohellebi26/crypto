@@ -15,8 +15,5 @@ dist/
 build/
 *.egg
 .streamlit/secrets.toml
-visuals/assets/
 *.log
 docs/
-ui/visuals/assets/
-visuals/output/

@@ -380,9 +380,14 @@ class SolitaireAssistant:
     """Assistant RAG : ChromaDB pour les embeddings, Gemini pour la génération."""
 
     def __init__(self, api_key: str | None = None) -> None:
-        self._api_key = api_key or os.getenv("GEMINI_API_KEY", "")
+        import streamlit as st
+        self._api_key = (
+            api_key
+            or os.getenv("GEMINI_API_KEY", "")
+            or st.secrets.get("GEMINI_API_KEY", "")
+        )
         if not self._api_key:
-            raise ValueError("GEMINI_API_KEY manquant. Définissez-le dans .env")
+            raise ValueError("GEMINI_API_KEY manquant. Définissez-le dans .env ou dans les secrets Streamlit Cloud.")
 
         # Import et configuration du SDK (ici, pas au niveau module pour éviter les conflits)
         import google.generativeai as genai

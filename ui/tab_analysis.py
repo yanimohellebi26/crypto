@@ -270,10 +270,10 @@ def _render_ai_interpretation(metrics: dict) -> None:
                 from dotenv import load_dotenv
                 
                 load_dotenv()
-                api_key = os.getenv("GEMINI_API_KEY")
+                api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
                 
                 if not api_key:
-                    st.error("Clé API Gemini introuvable. Configurez `GEMINI_API_KEY` dans le fichier `.env`.")
+                    st.error("Clé API Gemini introuvable. Configurez `GEMINI_API_KEY` dans `.env` ou les secrets Streamlit Cloud.")
                 else:
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel("models/gemini-2.5-pro")
